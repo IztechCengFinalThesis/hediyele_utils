@@ -20,9 +20,9 @@ class DataWriter:
                     for _, row in data_frame.iterrows():
                         cursor.execute(insert_query, tuple(row))
                     conn.commit()
-                    print(f"{data_file} verileri başarıyla {table_name} tablosuna yazıldı.")
+                    print(f"{data_file} data written to {table_name} table.")
                 except Exception as e:
-                    print(f"Veri yazılırken bir hata oluştu: {e}")
+                    print(f"Error while writing: {e}")
                     conn.rollback()
 
         cursor.close()

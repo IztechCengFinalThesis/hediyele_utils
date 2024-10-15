@@ -1,18 +1,23 @@
-from table_executor import TableExecutorUtil
-from data_writer import DataWriter
+from table_executor.table_executor_utils import TableExecutorUtil
+from data_writer.data_writer_utils import DataWriter
 import os
+import subprocess
 
 tables_folder_path = "all_tables"
-
+requirements_file = "requirements.txt"
 data_folder_path = "data"
 
 def main():
-    print("Tablolar oluşturuluyor...")
+
+    if os.path.exists(requirements_file):
+        print(f"Installing packages from {requirements_file}")
+        subprocess.check_call([os.sys.executable, "-m", "pip", "install", "-r", requirements_file])
+    else:
+        print(f"{requirements_file} not found, skipping package installation.")
+
     table_util = TableExecutorUtil()
     table_util.create_tables(tables_folder_path)
-    print("Tablolar başarıyla oluşturuldu.")
 
-    print("Veriler tabloya yazılıyor...")
     data_writer = DataWriter()
     
     for data_file in os.listdir(data_folder_path):
