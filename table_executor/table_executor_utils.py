@@ -14,9 +14,9 @@ class TableExecutorUtil:
                     try:
                         cursor.execute(create_table_query)
                         conn.commit()
-                        print(f"{sql_file} başarıyla çalıştırıldı.")
+                        print(f"{sql_file} executed successfully.")
                     except Exception as e:
-                        print(f"{sql_file} oluşturulurken bir hata oluştu: {e}")
+                        print(f"{sql_file} error while executing: {e}")
                         conn.rollback()
 
         cursor.close()
