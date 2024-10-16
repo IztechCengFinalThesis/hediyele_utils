@@ -1,5 +1,6 @@
 from table_executor.table_executor_utils import TableExecutorUtil
 from data_writer.data_writer_utils import DataWriter
+from vectorizer_utils.vectorizer_utils import CategoryVectorizer
 import os
 import subprocess
 
@@ -23,6 +24,8 @@ def main():
     for data_file in os.listdir(data_folder_path):
         table_name = data_file.split(".")[0]
         data_writer.write_data(data_folder_path, table_name)
+
+    CategoryVectorizer().vectorize_categories()
 
 if __name__ == "__main__":
     main()
