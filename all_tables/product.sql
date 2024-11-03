@@ -1,5 +1,4 @@
-DROP TABLE IF EXISTS product CASCADE;
-CREATE TABLE product (
+CREATE TABLE IF NOT EXISTS product (
     id SERIAL PRIMARY KEY,
     category TEXT,
     link TEXT,

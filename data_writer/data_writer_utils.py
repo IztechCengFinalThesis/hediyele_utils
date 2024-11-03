@@ -11,6 +11,11 @@ class DataWriter:
 
         for data_file in os.listdir(data_folder_path):
             if data_file.endswith(".xlsx"):
+                cursor.execute("SELECT 1 FROM ADDED_FILE_NAMES WHERE FILE_NAME = %s;", (data_file,))
+                if cursor.fetchone():
+                    print(f"Skipping file '{data_file}' as it has already been processed.")
+                    continue
+
                 file_path = os.path.join(data_folder_path, data_file)
                 print(f"Processing file: {data_file} located at {file_path}")
                 data_frame = pd.read_excel(file_path)
@@ -51,6 +56,13 @@ class DataWriter:
                         conn.rollback()
 
             print(f"Finished processing file '{data_file}'. All valid rows inserted into '{product_table_name}' table.")
+            try:
+                cursor.execute("INSERT INTO ADDED_FILE_NAMES (FILE_NAME) VALUES (%s);", (data_file,))
+                conn.commit()
+                print(f"Recorded '{data_file}' as processed in ADDED_FILE_NAMES.")
+            except Exception as e:
+                print(f"Error while recording file '{data_file}' in ADDED_FILE_NAMES: {e}")
+                conn.rollback()
 
         category_insert_query = f"""
             INSERT INTO {category_table_name} (category_name)

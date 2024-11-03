@@ -19,10 +19,7 @@ def main():
     table_util.create_tables(tables_folder_path)
 
     data_writer = DataWriter()
-    
-    for data_file in os.listdir(data_folder_path):
-        table_name = data_file.split(".")[0]
-        data_writer.write_data(data_folder_path, table_name)
+    data_writer.write_data(data_folder_path)
 
     CategoryVectorizer().vectorize_categories()
 
