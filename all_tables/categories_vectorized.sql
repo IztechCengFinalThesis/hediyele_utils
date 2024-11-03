@@ -1,5 +1,4 @@
-DROP TABLE IF EXISTS categories_vectorized;
-CREATE TABLE categories_vectorized (
+CREATE TABLE IF NOT EXISTS categories_vectorized (
     id SERIAL PRIMARY KEY,
     category_id INT,
     vector FLOAT8[]
