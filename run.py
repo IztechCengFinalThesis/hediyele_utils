@@ -9,7 +9,6 @@ requirements_file = "requirements.txt"
 data_folder_path = "data"
 
 def main():
-
     if os.path.exists(requirements_file):
         print(f"Installing packages from {requirements_file}")
         subprocess.check_call([os.sys.executable, "-m", "pip", "install", "-r", requirements_file])
