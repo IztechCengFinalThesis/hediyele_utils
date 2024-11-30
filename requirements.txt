@@ -3,3 +3,4 @@ psycopg2
 SQLAlchemy
 openpyxl
 scikit-learn
+openapi

@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS product (
     id SERIAL PRIMARY KEY,
-    category TEXT,
+    category_id INTEGER REFERENCES categories(id) ON DELETE CASCADE,
     link TEXT,
     product_name TEXT,
     price NUMERIC,

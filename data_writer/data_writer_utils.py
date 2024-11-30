@@ -1,83 +1,134 @@
 import os
 import pandas as pd
 from config.db_config import get_db_connection
+from typing import List, Dict, Set
+from collections import defaultdict
 
 class DataWriter:
-    def write_data(self, data_folder_path, product_table_name="product", category_table_name="categories"):
+    def __init__(self, batch_size: int = 1000):
+        self.batch_size = batch_size
+        
+    def write_data(self, data_folder_path: str, product_table_name: str = "product", category_table_name: str = "categories") -> None:
         conn = get_db_connection()
         cursor = conn.cursor()
-
-        unique_categories = set()
-
-        for data_file in os.listdir(data_folder_path):
-            if data_file.endswith(".xlsx"):
-                cursor.execute("SELECT 1 FROM ADDED_FILE_NAMES WHERE FILE_NAME = %s;", (data_file,))
-                if cursor.fetchone():
-                    print(f"Skipping file '{data_file}' as it has already been processed.")
-                    continue
-
-                file_path = os.path.join(data_folder_path, data_file)
-                print(f"Processing file: {data_file} located at {file_path}")
-                data_frame = pd.read_excel(file_path)
-
-                required_columns = {"Category", "Link", "Product Name", "Price", "Description", "Rating"}
-                if not required_columns.issubset(data_frame.columns):
-                    print(f"Skipping {data_file}: missing required columns {required_columns - set(data_frame.columns)}.")
-                    continue
-
-                for row_index, row in data_frame.iterrows():
-                    category_name = row["Category"]
-                    unique_categories.add(category_name)
-
-                    price_str = str(row["Price"])
-                    try:
-                        price = float(price_str.replace(".", "").replace(",", "."))
-                    except ValueError as e:
-                        print(f"Skipping row {row_index} in '{data_file}': unable to convert price '{price_str}' to float. Error: {e}")
-                        continue
-
-                    insert_query = f"""
-                        INSERT INTO {product_table_name} (category, link, product_name, price, description, rating)
-                        VALUES (%s, %s, %s, %s, %s, %s);
-                    """
-                    try:
-                        cursor.execute(insert_query, (
-                            row["Category"],      # category
-                            row["Link"],          # link
-                            row["Product Name"],  # product_name
-                            price,                # price (converted)
-                            row["Description"],   # description
-                            row["Rating"]         # rating
-                        ))
-                        conn.commit()
-                        print(f"Inserted row {row_index + 1} from '{data_file}' into '{product_table_name}'")
-                    except Exception as e:
-                        print(f"Error while inserting row {row_index + 1} from '{data_file}': {e}")
-                        conn.rollback()
-
-            print(f"Finished processing file '{data_file}'. All valid rows inserted into '{product_table_name}' table.")
+        
+        try:
+            # First, ensure the category_name column has a unique constraint
             try:
+                cursor.execute(f"""
+                    ALTER TABLE {category_table_name} 
+                    ADD CONSTRAINT category_name_unique UNIQUE (category_name);
+                """)
+                conn.commit()
+            except Exception as e:
+                # Constraint might already exist, which is fine
+                conn.rollback()
+            
+            # Get already processed files
+            cursor.execute("SELECT FILE_NAME FROM ADDED_FILE_NAMES;")
+            processed_files = {row[0] for row in cursor.fetchall()}
+            
+            # Get existing categories and their IDs
+            cursor.execute(f"SELECT id, category_name FROM {category_table_name};")
+            category_map = {row[1]: row[0] for row in cursor.fetchall()}
+            
+            new_categories: Set[str] = set()
+            products_batch: List[tuple] = []
+            
+            # First pass: collect all categories
+            for data_file in os.listdir(data_folder_path):
+                if not data_file.endswith(".xlsx") or data_file in processed_files:
+                    continue
+                    
+                file_path = os.path.join(data_folder_path, data_file)
+                print(f"Processing file: {data_file}")
+                
+                df = pd.read_excel(file_path)
+                required_columns = {"Category", "Link", "Product Name", "Price", "Description", "Rating"}
+                if not required_columns.issubset(df.columns):
+                    print(f"Skipping {data_file}: missing required columns {required_columns - set(df.columns)}.")
+                    continue
+                    
+                new_categories.update(set(df["Category"].unique()) - set(category_map.keys()))
+            
+            # Batch insert new categories
+            if new_categories:
+                # Insert categories one by one to handle duplicates
+                for category in new_categories:
+                    try:
+                        cursor.execute(f"""
+                            INSERT INTO {category_table_name} (category_name)
+                            VALUES (%s)
+                            ON CONFLICT (category_name) DO NOTHING;
+                        """, (category,))
+                    except Exception as e:
+                        print(f"Error inserting category {category}: {e}")
+                        conn.rollback()
+                
+                conn.commit()
+                
+                # Update category map with new categories
+                cursor.execute(f"SELECT id, category_name FROM {category_table_name} WHERE category_name = ANY(%s);", 
+                             (list(new_categories),))
+                category_map.update({row[1]: row[0] for row in cursor.fetchall()})
+            
+            # Second pass: process products
+            for data_file in os.listdir(data_folder_path):
+                if not data_file.endswith(".xlsx") or data_file in processed_files:
+                    continue
+                    
+                file_path = os.path.join(data_folder_path, data_file)
+                df = pd.read_excel(file_path)
+                
+                if not required_columns.issubset(df.columns):
+                    continue
+                
+                # Convert price column to numeric, handling different formats
+                df["Price"] = pd.to_numeric(
+                    df["Price"].astype(str).str.replace(".", "").str.replace(",", "."),
+                    errors="coerce"
+                )
+                
+                # Filter out rows with invalid prices
+                df = df.dropna(subset=["Price"])
+                
+                # Prepare batch of products
+                for _, row in df.iterrows():
+                    products_batch.append((
+                        category_map[row["Category"]],
+                        row["Link"],
+                        row["Product Name"],
+                        float(row["Price"]),
+                        row["Description"],
+                        row["Rating"]
+                    ))
+                    
+                    # Insert batch when it reaches the specified size
+                    if len(products_batch) >= self.batch_size:
+                        self._insert_products_batch(cursor, products_batch, product_table_name)
+                        products_batch = []
+                        conn.commit()
+                
+                # Record processed file
                 cursor.execute("INSERT INTO ADDED_FILE_NAMES (FILE_NAME) VALUES (%s);", (data_file,))
                 conn.commit()
-                print(f"Recorded '{data_file}' as processed in ADDED_FILE_NAMES.")
-            except Exception as e:
-                print(f"Error while recording file '{data_file}' in ADDED_FILE_NAMES: {e}")
-                conn.rollback()
-
-        category_insert_query = f"""
-            INSERT INTO {category_table_name} (category_name)
-            VALUES (%s) ON CONFLICT DO NOTHING;
+                print(f"Processed file: {data_file}")
+            
+            # Insert any remaining products
+            if products_batch:
+                self._insert_products_batch(cursor, products_batch, product_table_name)
+                conn.commit()
+                
+        finally:
+            cursor.close()
+            conn.close()
+            print("Database connection closed.")
+    
+    def _insert_products_batch(self, cursor, products_batch: List[tuple], product_table_name: str) -> None:
+        insert_query = f"""
+            INSERT INTO {product_table_name} 
+            (category_id, link, product_name, price, description, rating)
+            VALUES (%s, %s, %s, %s, %s, %s);
         """
-        try:
-            cursor.executemany(category_insert_query, [(category,) for category in unique_categories])
-            conn.commit()
-            print(f"Inserted {len(unique_categories)} unique categories into '{category_table_name}' table:")
-            for category in unique_categories:
-                print(f"    - {category}")
-        except Exception as e:
-            print(f"Error while inserting unique categories into '{category_table_name}' table: {e}")
-            conn.rollback()
-
-        cursor.close()
-        conn.close()
-        print("Database connection closed.")
+        cursor.executemany(insert_query, products_batch)
+        print(f"Inserted batch of {len(products_batch)} products")

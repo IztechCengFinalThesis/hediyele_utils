@@ -1,4 +1,5 @@
 CREATE TABLE IF NOT EXISTS categories (
     id SERIAL PRIMARY KEY,
-    category_name TEXT
+    category_name TEXT,
+    main_category TEXT
 );
