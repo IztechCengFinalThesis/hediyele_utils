@@ -1,11 +1,15 @@
 import psycopg2
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 def get_db_connection():
     conn = psycopg2.connect(
-        host="hediyele-hediyele.h.aivencloud.com", 
-        database="defaultdb",
-        user="avnadmin",
-        password="AVNS_uB3eS5nBg9hbv93vLAa",
-        port="23984"
+        host=os.getenv("DB_HOST"),
+        database=os.getenv("DB_NAME"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD"),
+        port=os.getenv("DB_PORT")
     )
     return conn
