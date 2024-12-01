@@ -4,3 +4,4 @@ SQLAlchemy
 openpyxl
 scikit-learn
 openapi
+python-dotenv
