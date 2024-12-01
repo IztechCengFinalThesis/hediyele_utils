@@ -24,10 +24,11 @@ def main():
     #data_writer = DataWriter()
     #data_writer.write_data(data_folder_path)
 
-    #CategoryVectorizer().vectorize_categories()
+    categoryVectorizer = CategoryVectorizer()
+    categoryVectorizer.vectorize_categories()
 
-    mainCategoryWriter = MainCategoryWriter()
-    mainCategoryWriter.write_main_categories()
+    #mainCategoryWriter = MainCategoryWriter()
+    #mainCategoryWriter.write_main_categories()
 
 if __name__ == "__main__":
     main()
