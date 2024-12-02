@@ -11,7 +11,8 @@ class MainCategoryWriter:
         'Home & Kitchen',
         'Beauty & Personal Care',
         'Sports & Outdoors',
-        'Books & Miscellaneous'
+        'Books & Miscellaneous',
+        'Toys & Games'
     ]
 
     load_dotenv()

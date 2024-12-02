@@ -13,10 +13,9 @@ class CategoryVectorizer:
         self.client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
     def get_embedding(self, text):
-        """Get embedding for a single text using OpenAI's API"""
         try:
             response = self.client.embeddings.create(
-                model="text-embedding-ada-002",
+                model="text-embedding-3-small",
                 input=text
             )
             return response.data[0].embedding
