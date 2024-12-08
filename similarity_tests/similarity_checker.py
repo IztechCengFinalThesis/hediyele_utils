@@ -139,7 +139,7 @@ class SimilarityChecker:
             ])
 
             response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "You are a gift recommendation expert. Select the best product based on the user's requirements."},
                     {"role": "user", "content": f"User's gift requirements: {prompt}\n\nAvailable products:\n{products_context}"}
