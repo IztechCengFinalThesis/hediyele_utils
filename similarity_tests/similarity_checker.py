@@ -23,7 +23,7 @@ class SimilarityChecker:
         """Generate embedding for the given text using OpenAI's API"""
         try:
             response = self.client.embeddings.create(
-                model="text-embedding-ada-002",
+                model="text-embedding-3-small",
                 input=text
             )
             return response.data[0].embedding

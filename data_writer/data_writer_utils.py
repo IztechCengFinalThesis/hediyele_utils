@@ -81,6 +81,11 @@ class DataWriter:
                 
                 df = df.dropna(subset=["Price"])
                 df["Rating"] = df["Rating"].apply(lambda x: 2.5 if x == "Not yet evaluated" else x)
+                df["Rating"] = pd.to_numeric(
+                    df["Rating"].astype(str).str.replace(".", "").str.replace(",", "."),
+                    errors="coerce"
+                )
+                df = df.dropna(subset=["Rating"])
                 
                 for _, row in df.iterrows():
                     products_batch.append((
