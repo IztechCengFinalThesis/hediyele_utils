@@ -5,7 +5,7 @@ from data_writer.main_category_writer import MainCategoryWriter
 import os
 import subprocess
 
-tables_folder_path = "all_tables"
+tables_folder_path = "table_executor/all_tables"
 requirements_file = "requirements.txt"
 data_folder_path = "data"
 
