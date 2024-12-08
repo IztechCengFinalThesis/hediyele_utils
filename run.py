@@ -2,6 +2,7 @@ from table_executor.table_executor_utils import TableExecutorUtil
 from data_writer.data_writer_utils import DataWriter
 from vectorizer_utils.vectorizer_utils import CategoryVectorizer
 from data_writer.main_category_writer import MainCategoryWriter
+from similarity_tests.similarity_checker import SimilarityChecker
 import os
 import subprocess
 
@@ -29,6 +30,11 @@ def main():
 
     mainCategoryWriter = MainCategoryWriter()
     mainCategoryWriter.write_main_categories()
+
+    checker = SimilarityChecker()
+    result = checker.recommend_gift("Arkadaşım osman için bir hediye almayı düşünüyorum ve teknolojiyi çok seven birisi. Ne önerirsin?")
+    print(result)
+
 
 if __name__ == "__main__":
     main()

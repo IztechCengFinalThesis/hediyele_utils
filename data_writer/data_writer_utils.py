@@ -80,6 +80,7 @@ class DataWriter:
                 )
                 
                 df = df.dropna(subset=["Price"])
+                df["Rating"] = df["Rating"].apply(lambda x: 2.5 if x == "Not yet evaluated" else x)
                 
                 for _, row in df.iterrows():
                     products_batch.append((
