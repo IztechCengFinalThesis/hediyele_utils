@@ -3,90 +3,119 @@ import openai
 import os
 import json
 from config.db_config import get_db_connection
+from typing import List, Dict
 
 class MainCategoryWriter:
-    mainCategories = [
-        'Fashion & Accessories',
-        'Electronics & Gadgets',
-        'Home & Kitchen',
-        'Beauty & Personal Care',
-        'Sports & Outdoors',
-        'Books & Miscellaneous',
-        'Toys & Games'
-    ]
-
-    load_dotenv()
-    
     def __init__(self):
+        load_dotenv()
         self.client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        self.main_categories = self._load_main_categories()
 
-    def categorize_with_openai(self, categories):
-        prompt = f"""
-        You are helping with categorizing product categories into the following main categories:
-        {', '.join(self.mainCategories)}.
-        
-        Please match each category name to the most appropriate main category and return the result as a JSON object in the format:
-        {{
-            "category_name_1": "main_category_1",
-            "category_name_2": "main_category_2",
-            ...
-        }}
-        
-        Here are the product categories to categorize:
-        {', '.join(categories)}.
-        """
-        
+    def _load_main_categories(self) -> List[str]:
+        try:
+            with open('main_categories.txt', 'r') as f:
+                return [line.strip() for line in f.readlines() if line.strip()]
+        except FileNotFoundError:
+            raise FileNotFoundError("main_categories.txt file not found")
+
+    def categorize_with_openai(self, categories: List[str]) -> Dict[str, str]:
+        prompt = {
+            "type": "object",
+            "properties": {
+                "categorizations": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "category_name": {"type": "string"},
+                            "main_category": {"type": "string", "enum": self.main_categories}
+                        },
+                        "required": ["category_name", "main_category"]
+                    }
+                }
+            },
+            "required": ["categorizations"]
+        }
+
         try:
             response = self.client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant that categorizes products."},
-                    {"role": "user", "content": prompt}
+                    {"role": "user", "content": f"Categorize these products into main categories: {', '.join(categories)}"},
                 ],
+                functions=[{
+                    "name": "categorize_products",
+                    "description": "Categorize products into main categories",
+                    "parameters": prompt
+                }],
+                function_call={"name": "categorize_products"},
                 temperature=0.2
             )
             
-            categorized_data = response.choices[0].message.content.strip()
-            
-            try:
-                return json.loads(categorized_data)
-            except json.JSONDecodeError:
-                print("Error: Invalid JSON response from OpenAI")
-                return {}
+            result = json.loads(response.choices[0].message.function_call.arguments)
+            return {item["category_name"]: item["main_category"] for item in result["categorizations"]}
                 
         except Exception as e:
             print(f"Error categorizing with OpenAI: {e}")
             return {}
 
-    def write_main_categories(self, category_table_name="categories"):
+    def write_main_categories(self):
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        cursor.execute(f"SELECT category_name FROM {category_table_name};")
-        category_names = [row[0] for row in cursor.fetchall()]
+        try:
+            for main_category in self.main_categories:
+                cursor.execute(
+                    """
+                    INSERT INTO main_categories (name)
+                    VALUES (%s)
+                    ON CONFLICT (name) DO NOTHING;
+                    """,
+                    (main_category,)
+                )
+            
+            cursor.execute("SELECT id, category_name FROM categories WHERE main_category_id IS NULL;")
+            categories_to_update = cursor.fetchall()
+            
+            if not categories_to_update:
+                print("No categories found that need main category assignment.")
+                return
 
-        if not category_names:
-            print("No categories found in the database.")
-            return
+            category_names = [cat[1] for cat in categories_to_update]
+            categorized_mapping = self.categorize_with_openai(category_names)
 
-        categorized_mapping = self.categorize_with_openai(category_names)
+            if not categorized_mapping:
+                print("Failed to categorize categories. Exiting.")
+                return
 
-        if not categorized_mapping:
-            print("Failed to categorize categories. Exiting.")
-            return
+            cursor.execute("SELECT id, name FROM main_categories;")
+            main_category_ids = {row[1]: row[0] for row in cursor.fetchall()}
 
-        for category_name, main_category in categorized_mapping.items():
-            cursor.execute(
-                f"""
-                UPDATE {category_table_name}
-                SET main_category = %s
-                WHERE category_name = %s;
-                """,
-                (main_category, category_name)
-            )
+            for category_id, category_name in categories_to_update:
+                if category_name in categorized_mapping:
+                    main_category_name = categorized_mapping[category_name]
+                    main_category_id = main_category_ids.get(main_category_name)
+                    
+                    if main_category_id:
+                        cursor.execute(
+                            """
+                            UPDATE categories
+                            SET main_category_id = %s
+                            WHERE id = %s;
+                            """,
+                            (main_category_id, category_id)
+                        )
+                    else:
+                        print(f"Warning: Main category '{main_category_name}' not found in database")
+
+            conn.commit()
+            print("Main categories have been successfully updated in the database.")
+
+        except Exception as e:
+            conn.rollback()
+            print(f"Error updating categories: {e}")
         
-        conn.commit()
-        print("Main categories have been successfully updated in the database.")
-
-        cursor.close()
-        conn.close()
+        finally:
+            cursor.close()
+            conn.close()

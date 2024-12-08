@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS main_categories (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) UNIQUE NOT NULL
+);

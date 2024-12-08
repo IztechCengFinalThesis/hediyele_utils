@@ -18,14 +18,14 @@ def main():
         print(f"{requirements_file} not found, skipping package installation.")
     """
 
-    #table_util = TableExecutorUtil()
-    #table_util.create_tables(tables_folder_path)
+    table_util = TableExecutorUtil()
+    table_util.create_tables(tables_folder_path)
 
-    #data_writer = DataWriter()
-    #data_writer.write_data(data_folder_path)
+    data_writer = DataWriter()
+    data_writer.write_data(data_folder_path)
 
-    #categoryVectorizer = CategoryVectorizer()
-    #categoryVectorizer.vectorize_categories()
+    categoryVectorizer = CategoryVectorizer()
+    categoryVectorizer.vectorize_categories()
 
     mainCategoryWriter = MainCategoryWriter()
     mainCategoryWriter.write_main_categories()

@@ -13,7 +13,6 @@ class DataWriter:
         cursor = conn.cursor()
         
         try:
-            # First, ensure the category_name column has a unique constraint
             try:
                 cursor.execute(f"""
                     ALTER TABLE {category_table_name} 
@@ -21,21 +20,17 @@ class DataWriter:
                 """)
                 conn.commit()
             except Exception as e:
-                # Constraint might already exist, which is fine
                 conn.rollback()
             
-            # Get already processed files
             cursor.execute("SELECT FILE_NAME FROM ADDED_FILE_NAMES;")
             processed_files = {row[0] for row in cursor.fetchall()}
             
-            # Get existing categories and their IDs
             cursor.execute(f"SELECT id, category_name FROM {category_table_name};")
             category_map = {row[1]: row[0] for row in cursor.fetchall()}
             
             new_categories: Set[str] = set()
             products_batch: List[tuple] = []
             
-            # First pass: collect all categories
             for data_file in os.listdir(data_folder_path):
                 if not data_file.endswith(".xlsx") or data_file in processed_files:
                     continue
@@ -51,9 +46,7 @@ class DataWriter:
                     
                 new_categories.update(set(df["Category"].unique()) - set(category_map.keys()))
             
-            # Batch insert new categories
             if new_categories:
-                # Insert categories one by one to handle duplicates
                 for category in new_categories:
                     try:
                         cursor.execute(f"""
@@ -67,12 +60,10 @@ class DataWriter:
                 
                 conn.commit()
                 
-                # Update category map with new categories
                 cursor.execute(f"SELECT id, category_name FROM {category_table_name} WHERE category_name = ANY(%s);", 
                              (list(new_categories),))
                 category_map.update({row[1]: row[0] for row in cursor.fetchall()})
             
-            # Second pass: process products
             for data_file in os.listdir(data_folder_path):
                 if not data_file.endswith(".xlsx") or data_file in processed_files:
                     continue
@@ -83,16 +74,13 @@ class DataWriter:
                 if not required_columns.issubset(df.columns):
                     continue
                 
-                # Convert price column to numeric, handling different formats
                 df["Price"] = pd.to_numeric(
                     df["Price"].astype(str).str.replace(".", "").str.replace(",", "."),
                     errors="coerce"
                 )
                 
-                # Filter out rows with invalid prices
                 df = df.dropna(subset=["Price"])
                 
-                # Prepare batch of products
                 for _, row in df.iterrows():
                     products_batch.append((
                         category_map[row["Category"]],
@@ -103,18 +91,15 @@ class DataWriter:
                         row["Rating"]
                     ))
                     
-                    # Insert batch when it reaches the specified size
                     if len(products_batch) >= self.batch_size:
                         self._insert_products_batch(cursor, products_batch, product_table_name)
                         products_batch = []
                         conn.commit()
                 
-                # Record processed file
                 cursor.execute("INSERT INTO ADDED_FILE_NAMES (FILE_NAME) VALUES (%s);", (data_file,))
                 conn.commit()
                 print(f"Processed file: {data_file}")
             
-            # Insert any remaining products
             if products_batch:
                 self._insert_products_batch(cursor, products_batch, product_table_name)
                 conn.commit()
