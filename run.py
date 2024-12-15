@@ -1,8 +1,8 @@
 from table_executor.table_executor_utils import TableExecutorUtil
-from data_writer.data_writer_utils import DataWriter
+from data_writer.write_data_from_csv_to_db import WriteDataToDbFromCSV
 from vectorizer_utils.vectorizer_utils import CategoryVectorizer
 from data_writer.main_category_writer import MainCategoryWriter
-from similarity_tests.similarity_checker import SimilarityChecker
+from data_writer.product_features_writer import ProductFeatureWriter
 import os
 import subprocess
 
@@ -19,22 +19,20 @@ def main():
         print(f"{requirements_file} not found, skipping package installation.")
     """
 
-    #table_util = TableExecutorUtil()
-    #table_util.create_tables(tables_folder_path)
+    table_util = TableExecutorUtil()
+    table_util.create_tables(tables_folder_path)
     
-    #data_writer = DataWriter()
-    #data_writer.write_data(data_folder_path)
+    data_writer = WriteDataToDbFromCSV()
+    data_writer.write_data(data_folder_path)
 
-    #categoryVectorizer = CategoryVectorizer()
-    #categoryVectorizer.vectorize_categories()
+    categoryVectorizer = CategoryVectorizer()
+    categoryVectorizer.vectorize_categories()
 
-    #mainCategoryWriter = MainCategoryWriter()
-    #mainCategoryWriter.write_main_categories()
+    mainCategoryWriter = MainCategoryWriter()
+    mainCategoryWriter.write_main_categories()
 
-    checker = SimilarityChecker()
-    result = checker.recommend_gift("Arkadaşım osmana bir hediye almak istiyorum telefonu çok kötü ama telefon istemiyor teknoloji meraklısı aynı zamanda da kötü kokan birisi ona belki bir parfüm hediye alabilirim ama parfüm hakaret gibi olur aslında sporlar ilgilense de fena olmaz ne yapabilirim bilmiyorum bana hediye için bir tavsiye verir misin?")
-    print(result)
-
+    product_features_writer = ProductFeatureWriter()
+    product_features_writer.update_product_features()
 
 if __name__ == "__main__":
     main()
