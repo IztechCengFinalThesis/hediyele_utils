@@ -57,7 +57,7 @@ class Prompts:
     def get_feature_score(client: openai.OpenAI, product_info: Dict, feature: str) -> float:
         try:
             response = client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": constants.FEATURE_PROMPT},
                     {"role": "user", "content": Prompts.get_scoring_prompt(product_info, feature)}
@@ -82,7 +82,7 @@ class Prompts:
     def categorize_with_openai(client: openai.OpenAI, categories: List[str], main_categories: List[str]) -> Dict[str, str]:
         try:
             response = client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": constants.CATEGORY_PROMPT},
                     {"role": "user", "content": Prompts.get_categorization_prompt(categories)},
