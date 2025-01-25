@@ -6,3 +6,4 @@ scikit-learn
 openapi
 python-dotenv
 tiktoken
+streamlit

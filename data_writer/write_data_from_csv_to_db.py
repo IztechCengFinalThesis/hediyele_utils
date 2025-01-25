@@ -51,7 +51,6 @@ class WriteDataToDbFromCSV:
                               category_table_name: str) -> Dict[str, int]:
         for category in new_categories:
             self.db.insert_category(category, category_table_name)
-        
         return self.db.get_category_map(category_table_name)
 
     def _process_files_for_products(self, data_folder_path: str, 
@@ -67,7 +66,7 @@ class WriteDataToDbFromCSV:
             df = self._read_excel_file(os.path.join(data_folder_path, data_file))
             if df is None:
                 continue
-            
+            df_cleaned["Description"] = df_cleaned["Description"].apply(self._summarize_description)
             df_cleaned = self._clean_dataframe(df)
             products_batch.extend(self._create_product_tuples(df_cleaned, category_map))
             
@@ -122,3 +121,10 @@ class WriteDataToDbFromCSV:
             )
             for _, row in df.iterrows()
         ]
+    
+    def _summarize_description(self, description: str) -> str:
+        try:
+            return self.openai_client.summarize_description(description)
+        except Exception as e:
+            print(f"Error summarizing description: {e}")
+            return description

@@ -5,55 +5,6 @@ import constants
 
 class Prompts:
     @staticmethod
-    def get_scoring_prompt(product_info: dict, feature: str) -> str:
-        return (
-            f"Product Name: {product_info['name']}\n"
-            f"Category: {product_info['category']}\n"
-            f"Description: {product_info['description']}\n\n"
-            f"On a scale of 0-10, score how relevant this product is for {feature}. "
-            "Return just the score as a number."
-        )
-    
-    @staticmethod
-    def get_score_function_schema(field: str) -> dict:
-        return {
-            "type": "object",
-            "properties": {
-                "score": {
-                    "type": "number",
-                    "minimum": 0,
-                    "maximum": 10,
-                    "description": f"Score from 0-10 for how relevant this product is for {field}"
-                }
-            },
-            "required": ["score"]
-        }
-
-    @staticmethod
-    def get_categorization_function_schema(main_categories: List[str]) -> dict:
-        return {
-            "type": "object",
-            "properties": {
-                "categorizations": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "category_name": {"type": "string"},
-                            "main_category": {"type": "string", "enum": main_categories}
-                        },
-                        "required": ["category_name", "main_category"]
-                    }
-                }
-            },
-            "required": ["categorizations"]
-        }
-
-    @staticmethod
-    def get_categorization_prompt(categories: List[str]) -> str:
-        return f"Categorize these products into main categories: {', '.join(categories)}"
-
-    @staticmethod
     def get_feature_score(client: openai.OpenAI, product_info: Dict, feature: str) -> float:
         try:
             response = client.chat.completions.create(
@@ -102,3 +53,73 @@ class Prompts:
         except Exception as e:
             print(f"Error categorizing with OpenAI: {e}")
             return {}
+    
+    @staticmethod
+    def summarize_description(client: openai.OpenAI, description: str) -> str:
+        try:
+            prompt = (
+                "Summarize the following product description in no more than 100 words: \n"
+                f"{description}"
+            )
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "You are an assistant that specializes in concise text summarization."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.3
+            )
+            summary = response.choices[0].message.content.strip()
+            return summary
+        except Exception as e:
+            print(f"Error summarizing description: {e}")
+            return ""
+        
+    @staticmethod
+    def get_scoring_prompt(product_info: dict, feature: str) -> str:
+        return (
+            f"Product Name: {product_info['name']}\n"
+            f"Category: {product_info['category']}\n"
+            f"Description: {product_info['description']}\n\n"
+            f"On a scale of 0-10, score how relevant this product is for {feature}. "
+            "Return just the score as a number."
+        )
+    
+    @staticmethod
+    def get_score_function_schema(field: str) -> dict:
+        return {
+            "type": "object",
+            "properties": {
+                "score": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10,
+                    "description": f"Score from 0-10 for how relevant this product is for {field}"
+                }
+            },
+            "required": ["score"]
+        }
+
+    @staticmethod
+    def get_categorization_function_schema(main_categories: List[str]) -> dict:
+        return {
+            "type": "object",
+            "properties": {
+                "categorizations": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "category_name": {"type": "string"},
+                            "main_category": {"type": "string", "enum": main_categories}
+                        },
+                        "required": ["category_name", "main_category"]
+                    }
+                }
+            },
+            "required": ["categorizations"]
+        }
+
+    @staticmethod
+    def get_categorization_prompt(categories: List[str]) -> str:
+        return f"Categorize these products into main categories: {', '.join(categories)}"
