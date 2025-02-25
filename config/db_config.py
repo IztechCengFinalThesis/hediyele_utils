@@ -12,4 +12,5 @@ def get_db_connection():
         password=os.getenv("DB_PASSWORD"),
         port=os.getenv("DB_PORT")
     )
+    conn.set_client_encoding('UTF8')
     return conn

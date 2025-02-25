@@ -66,8 +66,8 @@ class WriteDataToDbFromCSV:
             df = self._read_excel_file(os.path.join(data_folder_path, data_file))
             if df is None:
                 continue
-            df_cleaned["Description"] = df_cleaned["Description"].apply(self._summarize_description)
             df_cleaned = self._clean_dataframe(df)
+            df_cleaned["Description"] = df_cleaned["Description"].apply(self._summarize_description)
             products_batch.extend(self._create_product_tuples(df_cleaned, category_map))
             
             if len(products_batch) >= self.batch_size:

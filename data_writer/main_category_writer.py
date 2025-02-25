@@ -49,3 +49,24 @@ class MainCategoryWriter:
 
         finally:
             self.db.close()
+
+    def clear_all_categories(self):
+        """ Tüm kategorileri temizler ve main_categories tablosunu sıfırlar. """
+        try:
+            self.db.connect()
+
+            self.db.cursor.execute("""
+                UPDATE categories SET main_category_id = NULL;
+            """)
+
+            self.db.cursor.execute("""
+                DELETE FROM main_categories;
+            """)
+
+            self.db.commit()
+            print("All categories and main categories have been cleared successfully.")
+        except Exception as e:
+            print(f"Error while clearing categories: {e}")
+            self.db.rollback()
+        finally:
+            self.db.close()

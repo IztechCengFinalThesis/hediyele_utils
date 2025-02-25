@@ -1,5 +1,7 @@
-Fashion & Accessories
-Electronics & Technology
+Fashion
+Accessories
+Electronics
+Technology
 Home & Living
 Beauty & Personal Care
 Sports & Outdoor
@@ -16,3 +18,4 @@ Pet Shop
 Musical Instruments & Equipment
 Party & Organization
 Arts & Crafts
+Unknown

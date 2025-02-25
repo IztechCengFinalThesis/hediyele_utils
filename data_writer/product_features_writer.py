@@ -17,7 +17,6 @@ class ProductFeatureWriter:
 
     def update_product_features(self):
         self.db.connect()
-        
         try:
             products = self.db.get_unprocessed_products()
             
