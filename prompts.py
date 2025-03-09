@@ -1,24 +1,29 @@
 import json
 import openai
+from pydantic import BaseModel
 from typing import Dict, List
 import constants
 
-class Prompts:
+class Prompts:   
     @staticmethod
-    def get_group_scoring_prompt(product_info: dict, features: dict) -> str:
+    def generate_scoring_prompt(product_info, features) -> str:
         prompt = (
             f"Product Name: {product_info['name']}\n"
             f"Category: {product_info['category']}\n"
             f"Description: {product_info['description']}\n\n"
-            "For each of the following features, evaluate the product's relevance on a scale from 0 to 10. "
-            "Return the results as structured output according to the schema. The key in your output should be 'scores', "
-            "which maps each feature key to its corresponding score.\n"
+            "You are preparing the database for the gift recommendation app \n"
+            "Based on the product details provided above, evaluate how well this product suitable for the gift receiver for the given features.\n"
+            "Rate each feature on a scale from 0 to 10\n"
+            "Please provide a score for each feature below, between 0 and 10. Each feature must be rated.\n\n"
+            "In response do not include the product information \n"
+            "The response format must be a dictionary which is every feature will be a key and the score of the feature is the value \n"
         )
-        for key, desc in features.items():
-            prompt += f"- {key}: {desc}\n"
+        
+        for key in features:
+            prompt += f"- {key}\n"
+        
         return prompt
-
-
+    
     @staticmethod
     def get_group_score_function_schema() -> dict:
         return {
@@ -29,8 +34,6 @@ class Prompts:
                     "description": "Mapping from feature keys to scores (0-10)",
                     "additionalProperties": {
                         "type": "number",
-                        "minimum": 0,
-                        "maximum": 10
                     }
                 }
             },
@@ -39,28 +42,28 @@ class Prompts:
 
 
     @staticmethod
-    def score_feature_group(client: openai.OpenAI, product_info: Dict, features: Dict[str, str]) -> Dict[str, float]:
-        try:
-            prompt = Prompts.get_group_scoring_prompt(product_info, features)
+    def score_feature_group(client, product_info, features):
+        try:            
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-4",
                 messages=[
                     {"role": "system", "content": constants.FEATURE_PROMPT},
-                    {"role": "user", "content": prompt}
+                    {"role": "user", "content": Prompts.generate_scoring_prompt(product_info, features)}
                 ],
                 functions=[{
                     "name": "score_feature_group",
                     "description": "Score the product's relevance for a group of features",
+                    "parameters": Prompts.get_group_score_function_schema() 
                 }],
                 function_call={"name": "score_feature_group"},
                 temperature=0.2,
             )
-            result = response.choices[0].message.function_call.arguments
-            return result['scores']
+            
+            scores = json.loads(response.choices[0].message.function_call.arguments)
+            return scores
         except Exception as e:
             print(f"Error scoring feature group: {e}")
             return {}
-
 
     @staticmethod
     def get_categorization_function_schema(main_categories: List[str]) -> dict:
