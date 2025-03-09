@@ -1,3 +1,5 @@
+from selenium_utils.scrapper import HepsiBuradaScraper, AmazonScraper
+
 # Product features and categorization prompts
 FEATURE_PROMPT = "You are a product analyst that scores products based on their relevance to specific features."
 CATEGORY_PROMPT = "You are a helpful assistant that categorizes products."
@@ -55,4 +57,9 @@ ALL_FEATURES = {
     **GENDERS,
     **SPECIAL_OCCASIONS,
     **INTERESTS
+}
+
+WEB_SITES = {
+    "HepsiBurada": HepsiBuradaScraper,
+    "Amazon": AmazonScraper
 }

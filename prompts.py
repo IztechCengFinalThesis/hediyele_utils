@@ -19,7 +19,7 @@ class Prompts:
                     "parameters": Prompts.get_score_function_schema(feature)
                 }],
                 function_call={"name": "score_feature"},
-                temperature=0.3
+                temperature=0.0
             )
             
             result = eval(response.choices[0].message.function_call.arguments)

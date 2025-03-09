@@ -7,3 +7,5 @@ openapi
 python-dotenv
 tiktoken
 streamlit
+selenium==4.0.0
+streamlit-aggrid
