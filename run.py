@@ -94,7 +94,7 @@ elif options == "Add Product":
     product_name = st.text_input("Product Name", value=product_data.get("Product Name", ""), key="product_name")
     category_name = st.text_input("Category Name", value=product_data.get("Category", ""), key="category_name")
     link = st.text_input("Product Link", value=product_data.get("Link", link_input), key="product_link")
-    price = st.number_input("Price", value=product_data.get("Price", ""), key="price")
+    price = st.text_input("Price", value=product_data.get("Price", ""), key="price")
     description = st.text_area("Description", value=product_data.get("Description", ""), key="description")
     rating = st.text_input("Rating", value=product_data.get("Rating", ""), key="rating")
 

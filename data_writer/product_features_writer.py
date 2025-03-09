@@ -2,7 +2,7 @@ from dotenv import load_dotenv
 import openai
 import os
 from typing import Dict
-from constants import ALL_FEATURES
+from constants import ALL_FEATURES, AGE_GROUPS, GENDERS, SPECIAL_OCCASIONS, INTERESTS
 from prompts import Prompts
 from db_operations.dbop_feature import DatabaseOperationsFeature
 
@@ -31,9 +31,14 @@ class ProductFeatureWriter:
                 features_id = self.db.create_product_features()
                 feature_updates = []
                 
-                for db_field, feature_desc in ALL_FEATURES.items():
-                    score = self._score_feature(product_info, feature_desc)
-                    feature_updates.append((db_field, score))
+                age_scores = Prompts.score_feature_group(self.client, product_info, AGE_GROUPS)
+                gender_scores = Prompts.score_feature_group(self.client, product_info, GENDERS)
+                special_scores = Prompts.score_feature_group(self.client, product_info, SPECIAL_OCCASIONS)
+                interest_scores = Prompts.score_feature_group(self.client, product_info, INTERESTS)
+                
+                combined_scores = {**age_scores, **gender_scores, **special_scores, **interest_scores}
+                for field, score in combined_scores.items():
+                    feature_updates.append((field, score))
                 
                 self.db.update_product_features(features_id, feature_updates)
                 self.db.link_product_features(product_id, features_id)
