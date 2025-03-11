@@ -111,6 +111,7 @@ elif options == "Add Product":
             product_feature_writer.update_product_features()
 
             st.success(f"Product '{product_name}' has been successfully added!")
+            st.rerun() 
         else:
             st.error("Please fill in all the fields.")
 
@@ -199,6 +200,7 @@ elif options == "Add Product Manually":
 
             if success:
                 st.success(f"Product '{product_name}' has been successfully added!")
+                st.rerun() 
             else:
                 st.error("An error occurred while adding the product.")
         else:
@@ -208,7 +210,7 @@ elif options == "Delete Product":
     st.title("Delete Product")
     db_operations = DatabaseOperationsData()
     total_products = db_operations.get_total_product_count()
-    products_per_page = st.number_input("Products per page", min_value=5, max_value=500, value=10, step=5)
+    products_per_page = st.number_input("Products per page", min_value=5, max_value=5000, value=10, step=5)
     page = st.number_input("Page", min_value=1, max_value=(total_products // products_per_page) + 1, value=1)
     offset = (page - 1) * products_per_page
     products = db_operations.fetch_products(limit=products_per_page, offset=offset)
@@ -257,7 +259,7 @@ elif options == "Delete Product":
                             st.success(f"Product {row['Name']} deleted")
                         else:
                             st.error(f"Product {row['Name']} could not be deleted")
-                    st.experimental_rerun()  # Sayfayı yenile
+                    st.rerun() 
                 except Exception as e:
                     st.error(f"Error during deletion: {e}")
         else:
@@ -270,7 +272,7 @@ elif options == "View Products":
     
     db_operations = DatabaseOperationsData()
     total_products = db_operations.get_total_product_count()
-    products_per_page = st.number_input("Products per page", min_value=5, max_value=500, value=10, step=5)
+    products_per_page = st.number_input("Products per page", min_value=5, max_value=5000, value=10, step=5)
     page = st.number_input("Page", min_value=1, max_value=(total_products // products_per_page) + 1, value=1)
     
     offset = (page - 1) * products_per_page
@@ -326,6 +328,7 @@ elif options == "Edit Main Categories":
             main_category_writer.write_main_categories()
 
             st.success("Changes saved and categories updated successfully!")
+            st.rerun() 
         except Exception as e:
             st.error(f"An error occurred while saving: {e}")
 
