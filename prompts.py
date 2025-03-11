@@ -7,59 +7,52 @@ import constants
 class Prompts:   
     @staticmethod
     def generate_scoring_prompt(product_info, features) -> str:
+        feature_list = "\n".join([f'- "{key}"' for key in features])
         prompt = (
-            f"Product Name: {product_info['name']}\n"
-            f"Category: {product_info['category']}\n"
-            f"Description: {product_info['description']}\n\n"
-            "You are preparing the database for the gift recommendation app \n"
-            "Based on the product details provided above, evaluate how well this product suitable for the gift receiver for the given features.\n"
-            "Rate each feature on a scale from 0 to 10\n"
-            "Please provide a score for each feature below, between 0 and 10. Each feature must be rated.\n\n"
-            "In response do not include the product information \n"
-            "The response format must be a dictionary which is every feature will be a key and the score of the feature is the value \n"
+            "You are an AI assistant tasked with evaluating a product for a gift recommendation system.\n\n"
+            "### Product Information\n"
+            f"- **Product Name:** {product_info['name']}\n"
+            f"- **Category:** {product_info['category']}\n"
+            f"- **Description:** {product_info['description']}\n\n"
+            "### Task Instructions\n"
+            "Based on the product details provided above, evaluate how suitable this product is for the gift receiver based on the given features.\n"
+            "You must assign a score from **0 to 10** for each feature. **0** means 'Not Relevant At All' and **10** means 'Perfectly Relevant'.\n"
+            "**Every feature must be scored.**\n\n"
+            "### Scoring Criteria\n"
+            "Consider the relevance of the product in relation to each feature. The scores should be integers between 0 and 10.\n\n"
+            "### Output Format\n"
+            "Your response must be a **valid JSON object** following this exact structure:\n"
+            "```\n"
+            "{\n"
+            '    "feature1": score1,\n'
+            '    "feature2": score2,\n'
+            '    "feature3": score3\n'
+            "}\n"
+            "```\n"
+            "**Important Notes:**\n"
+            "- Do **not** include any product information in your response.\n"
+            "- Do **not** provide explanations, just return the JSON object.\n"
+            "- Ensure every feature is included in the response with a valid score.\n\n"
+            "### Features to Score\n"
+            f"{feature_list}\n\n"
+            "Now, return the JSON object containing the scores."
         )
-        
-        for key in features:
-            prompt += f"- {key}\n"
-        
+
         return prompt
-    
-    @staticmethod
-    def get_group_score_function_schema() -> dict:
-        return {
-            "type": "object",
-            "properties": {
-                "scores": {
-                    "type": "object",
-                    "description": "Mapping from feature keys to scores (0-10)",
-                    "additionalProperties": {
-                        "type": "number",
-                    }
-                }
-            },
-            "required": ["scores"]
-        }
 
 
     @staticmethod
-    def score_feature_group(client, product_info, features):
+    def score_feature_group(client: openai.OpenAI, product_info, features):
         try:            
             response = client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": constants.FEATURE_PROMPT},
                     {"role": "user", "content": Prompts.generate_scoring_prompt(product_info, features)}
                 ],
-                functions=[{
-                    "name": "score_feature_group",
-                    "description": "Score the product's relevance for a group of features",
-                    "parameters": Prompts.get_group_score_function_schema() 
-                }],
-                function_call={"name": "score_feature_group"},
-                temperature=0.2,
+                temperature=0.0,
             )
-            
-            scores = json.loads(response.choices[0].message.function_call.arguments)
+            scores = json.loads(response.choices[0].message.content)
             return scores
         except Exception as e:
             print(f"Error scoring feature group: {e}")

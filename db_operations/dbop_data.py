@@ -149,7 +149,6 @@ class DatabaseOperationsData:
             self.cursor.execute(query, (limit, offset))
             products = self.cursor.fetchall()
 
-            # Decode işlemi
             fixed_products = []
             for product in products:
                 fixed_products.append(tuple(
@@ -210,7 +209,13 @@ class DatabaseOperationsData:
 
     def delete_product_from_database(self, product_id):
         try:
+            self.cursor.execute("SELECT product_features_id FROM product WHERE id = %s", (product_id,))
+            product_features_id = self.cursor.fetchone()
+
+            if product_features_id:
+                self.cursor.execute("DELETE FROM product_features WHERE id = %s", (product_features_id,))
             self.cursor.execute("DELETE FROM product WHERE id = %s", (product_id,))
+            
             self.conn.commit()
             return True
         except Exception as e:

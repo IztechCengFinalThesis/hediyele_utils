@@ -16,57 +16,57 @@ class BaseScraper:
     def quit(self):
         self.driver.quit()
 
+import re
+
 class HepsiBuradaScraper(BaseScraper):
     def get_product_details(self, link):
         self.driver.get(link)
-        wait = WebDriverWait(self.driver, 10)
-
-        try:
-            product_name_elem = wait.until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, 'h1[data-test-id="title"]'))
-            )
-            product_name = product_name_elem.text
-        except:
-            product_name = "Unknown"
-
-        try:
-            price_div = wait.until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, 'div[data-test-id="price-current-price"]'))
-            )
-            price = convert_price_str_to_float(price_div.text)
-        except:
-            price = "0"
-
-        try:
-            description_elem = wait.until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, 'div[data-test-id="ProductDescription"]'))
-            )
-            description_text = description_elem.text
-        except:
-            description_text = "Unknown"
-
-        try:
-            rating_elem = self.driver.find_element(By.CSS_SELECTOR, 'span.JYHIcZ8Z_Gz7VXzxFB96')
-            rating = rating_elem.text
-        except:
-            rating = "Not yet evaluated"
-
         html = self.driver.page_source
-        match = re.search(r'content_category:\[?"([^"\]]+)"?\]', html)
-        if match:
-            category = match.group(1).replace(r'\x3e', '>')
-            category = category.split('>')[-1].strip()
-        else:
-            category = "Unknown"
+        wait = WebDriverWait(self.driver, 10)
+        details = {'Link': link}
 
-        return {
-            'Link': link,
-            'Product Name': product_name,
-            'Price': price,
-            'Description': description_text,
-            'Rating': rating,
-            'Category': category
-        }
+        name_match = re.search(r'<title>\s*(.*?)\s*</title>', html, re.DOTALL)
+        if name_match:
+            details['Product Name'] = name_match.group(1).strip()
+        else:
+            details['Product Name'] = "Unknown"
+
+        price_match = re.search(r'"product_unit_prices":\s*\[\s*"([^"]+)"\s*\]', html)
+        if price_match:
+            price_str = price_match.group(1).strip()
+            try:
+                details['Price'] = float(price_str.replace(',', ''))
+            except Exception as e:
+                details['Price'] = price_str
+        else:
+            details['Price'] = "0"
+
+        try:
+            desc_elem = wait.until(
+                EC.visibility_of_element_located((By.CSS_SELECTOR, 'div[data-test-id="ProductDescription"]'))
+            )
+            details['Description'] = desc_elem.text.strip()
+        except Exception as e:
+            details['Description'] = "Unknown"
+
+        try:
+            rating_match = re.search(
+                r'data-test-id=["\']has-review["\'][^>]*>.*?<span[^>]*>(.*?)</span>',
+                html, re.DOTALL
+            )
+            if rating_match:
+                details['Rating'] = rating_match.group(1).strip()
+        except Exception as e:
+            details['Rating'] = "Not yet evaluated"
+
+        cat_match = re.search(r'content_category:\[?"([^"\]]+)"?\]', html)
+        if cat_match:
+            cat_text = cat_match.group(1).replace(r'\x3e', '>').split('>')[-1].strip()
+            details['Category'] = cat_text
+        else:
+            details['Category'] = "Unknown"
+
+        return details
 
 class AmazonScraper(BaseScraper):
     def get_product_details(self, link):

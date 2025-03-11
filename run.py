@@ -116,24 +116,63 @@ elif options == "Add Product":
 
 elif options == "Bulk Add Products":
     st.title("Bulk Add Products")
+    
+    if "bulk_product_data" not in st.session_state:
+        st.session_state.bulk_product_data = []
+
     site_option = st.selectbox("Select Site", list(WEB_SITES.keys()))
     bulk_links = st.text_area("Enter Product Links", placeholder="Enter one product link per line")
-    bulk_fetch_button = st.button("Fetch Bulk Products")
-    bulk_products = []
-    if bulk_fetch_button and bulk_links:
-        links = [l.strip() for l in bulk_links.splitlines() if l.strip()]
-        scraper_class = WEB_SITES.get(site_option)
-        if scraper_class:
-            scraper = scraper_class()
-            for l in links:
-                bulk_products.append(scraper.get_product_details(l))
-            scraper.quit()
-    if bulk_products:
-        st.write("Fetched Products")
-        df = pd.DataFrame(bulk_products)
-        st.dataframe(df)
+
+    if st.button("Fetch Bulk Products"):
+        if bulk_links.strip():
+            links = [l.strip() for l in bulk_links.splitlines() if l.strip()]
+            scraper_class = WEB_SITES.get(site_option)
+
+            if scraper_class:
+                scraper = scraper_class()
+                fetched_products = []
+                
+                for l in links:
+                    product_details = scraper.get_product_details(l)
+                    if product_details:
+                        fetched_products.append(product_details)
+                
+                scraper.quit()
+                
+                if fetched_products:
+                    st.session_state.bulk_product_data = fetched_products
+                    st.success(f"Fetched {len(fetched_products)} products successfully!")
+                else:
+                    st.warning("No products were fetched. Please check the links.")
+        else:
+            st.error("Please enter at least one product link.")
+
+    if st.session_state.bulk_product_data:
+        st.subheader("Review & Edit Fetched Products")
+        df = pd.DataFrame(st.session_state.bulk_product_data)
+        edited_df = st.data_editor(df, num_rows="dynamic")
+
         if st.button("Add Bulk Products"):
-            st.success("Bulk products added successfully!")
+            if not edited_df.empty:
+                db_operations = DatabaseOperationsData()
+                main_category_writer = MainCategoryWriter()
+                product_feature_writer = ProductFeatureWriter()
+
+                for _, row in edited_df.iterrows():
+                    category_id = db_operations.add_category_if_not_exists(row["Category"])
+                    success = db_operations.add_product_to_database(
+                        row["Product Name"], category_id, row["Link"], row["Price"],
+                        row["Description"], row["Rating"]
+                    )
+
+                main_category_writer.write_main_categories()
+                product_feature_writer.update_product_features()
+                st.success(f"Successfully added {len(edited_df)} products!")
+                
+                st.session_state.bulk_product_data = []
+            else:
+                st.error("No products to add. Please fetch products first.")
+
 
 elif options == "Add Product Manually":
     st.title("Add Product Manually")
