@@ -70,42 +70,7 @@ class HepsiBuradaScraper(BaseScraper):
 
 class AmazonScraper(BaseScraper):
     def get_product_details(self, link):
-        self.driver.get(link)
-        wait = WebDriverWait(self.driver, 10)
-
-        try:
-            product_name_elem = wait.until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, 'span#productTitle'))
-            )
-            product_name = product_name_elem.text.strip()
-        except:
-            product_name = "Unknown"
-
-        try:
-            price_elem = wait.until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, 'span.a-price span.a-offscreen'))
-            )
-            price = price_elem.text.strip()
-        except:
-            price = "Unknown"
-
-        try:
-            description_elem = self.driver.find_element(By.CSS_SELECTOR, 'div#productDescription')
-            description_text = description_elem.text.strip()
-        except:
-            description_text = "Unknown"
-
-        try:
-            rating_elem = self.driver.find_element(By.CSS_SELECTOR, 'span.a-icon-alt')
-            rating = rating_elem.text.strip()
-        except:
-            rating = "Not yet evaluated"
-
-        return {
-            'Link': link,
-            'Product Name': product_name,
-            'Price': price,
-        }
+        return None
 
 
 import re

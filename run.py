@@ -10,6 +10,7 @@ from data_writer.product_features_writer import ProductFeatureWriter
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 from selenium_utils.scrapper import BaseScraper
 from constants import WEB_SITES
+import time
 
 st.set_page_config(page_title="Hediyele - Product Management", page_icon="🎁", layout="centered")
 
@@ -23,6 +24,7 @@ options = st.sidebar.radio(
         "Bulk Add Products",
         "View Products",
         "Edit Main Categories",
+        "Upload CSV Products",
         "Run Database Setup"
     ]
 )
@@ -38,27 +40,27 @@ if options == "Run Database Setup":
 
         try:
             with st.spinner("Please Wait..."):
-                #table_util = TableExecutorUtil()
-                #st.write("[1/4] Creating tables...")
-                #table_util.create_tables("table_executor/all_tables")
-                #st.success("Tables created successfully!")
-                #time.sleep(1)
+                table_util = TableExecutorUtil()
+                st.write("[1/4] Creating tables...")
+                table_util.create_tables("table_executor/all_tables")
+                st.success("Tables created successfully!")
+                time.sleep(1)
 
-                #st.write("[2/4] Writing data from CSV to database...")
-                #data_writer = WriteDataToDbFromCSV()
-                #data_writer.write_data("data")
-                #st.success("Data written successfully!")
-                #time.sleep(1)
+                st.write("[2/4] Writing data from CSV to database...")
+                data_writer = WriteDataToDbFromCSV()
+                data_writer.write_data("data")
+                st.success("Data written successfully!")
+                time.sleep(1)
 
-                # st.write("[3/4] Writing main categories...")
-                # main_category_writer = MainCategoryWriter()
-                # main_category_writer.write_main_categories()
-                # st.success("Main categories written successfully!")
+                st.write("[3/4] Writing main categories...")
+                main_category_writer = MainCategoryWriter()
+                main_category_writer.write_main_categories()
+                st.success("Main categories written successfully!")
 
-                #st.write("[4/4] Calculating the Product Features...")
-                #product_features_writer = ProductFeatureWriter()
-                #product_features_writer.update_product_features()
-                #st.success("Product Features written successfully!")
+                st.write("[4/4] Calculating the Product Features...")
+                product_features_writer = ProductFeatureWriter()
+                product_features_writer.update_product_features()
+                st.success("Product Features written successfully!")
 
                 st.success("Database setup completed successfully!")
 
@@ -69,6 +71,20 @@ if options == "Run Database Setup":
 
         output_log = output_capture.getvalue()
         st.text_area("Database Setup Logs", value=output_log, height=300)
+
+elif options == "Upload CSV Products":
+    st.title("Upload CSV Products")
+    uploaded_file = st.file_uploader("Upload a CSV file", type=["xlsx"])
+
+    if uploaded_file is not None:
+        import os
+        upload_folder = "data/"
+        if not os.path.exists(upload_folder):
+            os.makedirs(upload_folder)
+        file_path = os.path.join(upload_folder, uploaded_file.name)
+        with open(file_path, "wb") as f:
+            f.write(uploaded_file.getbuffer())
+        st.success("File uploaded successfully!")
 
 elif options == "Add Product":
     st.title("Add Product")

@@ -2,12 +2,19 @@ import os
 import pandas as pd
 from typing import List, Set, Dict
 from db_operations.dbop_data import DatabaseOperationsData
+from dotenv import load_dotenv
+from prompts import Prompts
+import openai
 
 class WriteDataToDbFromCSV:
     def __init__(self, batch_size: int = 1000):
+        load_dotenv()
         self.batch_size = batch_size
         self.db = DatabaseOperationsData()
         self.required_columns = {"Category", "Link", "Product Name", "Price", "Description", "Rating"}
+        self.openai_client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        self.prompts = Prompts()
+
 
     def write_data(self, data_folder_path: str, product_table_name: str = "product", 
                   category_table_name: str = "categories") -> None:
@@ -124,7 +131,7 @@ class WriteDataToDbFromCSV:
     
     def _summarize_description(self, description: str) -> str:
         try:
-            return self.openai_client.summarize_description(description)
+            return Prompts.summarize_description(self.openai_client, description)
         except Exception as e:
             print(f"Error summarizing description: {e}")
             return description
