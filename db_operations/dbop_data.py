@@ -173,6 +173,16 @@ class DatabaseOperationsData:
     def add_product_to_database(self, product_name, category_id, link, price, description, rating):
         try:
             self.cursor.execute(
+                "SELECT id FROM product WHERE link = %s",
+                (link,)
+            )
+            existing_product = self.cursor.fetchone()
+            
+            if existing_product:
+                print(f"Product with link '{link}' already exists in the database.")
+                return False
+                
+            self.cursor.execute(
                 """
                 INSERT INTO product (category_id, link, product_name, price, description, rating)
                 VALUES (%s, %s, %s, %s, %s, %s)
@@ -222,3 +232,11 @@ class DatabaseOperationsData:
             print(f"An error occurred while deleting the product: {e}")
             self.conn.rollback()
             return False
+
+    def last_inserted_id(self) -> int:
+        try:
+            self.cursor.execute("SELECT lastval()")
+            return self.cursor.fetchone()[0]
+        except Exception as e:
+            print(f"Error getting last inserted ID: {e}")
+            return None

@@ -6,49 +6,49 @@ CATEGORY_PROMPT = "You are a helpful assistant that categorizes products."
 
 # Age group mappings
 AGE_GROUPS = {
-    "age_0_2": "ages 0-2",
-    "age_3_5": "ages 3-5",
-    "age_6_12": "ages 6-12",
-    "age_13_18": "ages 13-18",
-    "age_19_29": "ages 19-29",
-    "age_30_45": "ages 30-45",
-    "age_45_65": "ages 45-65",
-    "age_65_plus": "ages 65 and above"
+    "age_0_2": "Ages 0-2",
+    "age_3_5": "Ages 3-5",
+    "age_6_12": "Ages 6-12",
+    "age_13_18": "Ages 13-18",
+    "age_19_29": "Ages 19-29",
+    "age_30_45": "Ages 30-45",
+    "age_45_65": "Ages 45-65",
+    "age_65_plus": "Ages 65+"
 }
 
 # Gender mappings
 GENDERS = {
-    "gender_male": "male users",
-    "gender_female": "female users"
+    "gender_male": "Male Users",
+    "gender_female": "Female Users"
 }
 
 # Special occasion mappings
 SPECIAL_OCCASIONS = {
-    "special_birthday": "birthday gifts",
-    "special_anniversary": "anniversary gifts",
-    "special_valentines": "Valentine's Day gifts",
-    "special_new_year": "New Year gifts",
-    "special_house_warming": "house warming gifts",
-    "special_mothers_day": "Mother's Day gifts",
-    "special_fathers_day": "Father's Day gifts"
+    "special_birthday": "Birthday Gifts",
+    "special_anniversary": "Anniversary Gifts",
+    "special_valentines": "Valentine's Day",
+    "special_new_year": "New Year",
+    "special_house_warming": "House Warming",
+    "special_mothers_day": "Mother's Day",
+    "special_fathers_day": "Father's Day"
 }
 
 # Interest category mappings
 INTERESTS = {
-    "interest_sports": "sports enthusiasts",
-    "interest_music": "music lovers",
-    "interest_books": "book readers",
-    "interest_technology": "tech enthusiasts",
-    "interest_travel": "travelers",
-    "interest_art": "art lovers",
-    "interest_food": "food enthusiasts",
-    "interest_fitness": "fitness enthusiasts",
-    "interest_health": "health conscious people",
-    "interest_photography": "photography enthusiasts",
-    "interest_fashion": "fashion enthusiasts",
-    "interest_pets": "pet owners",
-    "interest_home_decor": "home decoration enthusiasts",
-    "interest_movies_tv": "movie and TV show fans"
+    "interest_sports": "Sports",
+    "interest_music": "Music",
+    "interest_books": "Books",
+    "interest_technology": "Technology",
+    "interest_travel": "Travel",
+    "interest_art": "Art",
+    "interest_food": "Food",
+    "interest_fitness": "Fitness",
+    "interest_health": "Health",
+    "interest_photography": "Photography",
+    "interest_fashion": "Fashion",
+    "interest_pets": "Pets",
+    "interest_home_decor": "Home Decor",
+    "interest_movies_tv": "Movies & TV"
 }
 
 # Combined dictionary of all feature mappings

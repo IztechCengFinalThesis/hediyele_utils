@@ -37,7 +37,6 @@ class Prompts:
             f"{feature_list}\n\n"
             "Now, return the JSON object containing the scores."
         )
-
         return prompt
 
 
