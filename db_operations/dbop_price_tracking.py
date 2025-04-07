@@ -94,3 +94,19 @@ class DatabaseOperationsPriceTracking:
         except Exception as e:
             print(f"Error getting today's tracked count: {e}")
             return 0
+
+    def get_products_with_price_changes(self) -> List[Tuple]:
+        try:
+            self.cursor.execute("""
+                SELECT p.id, p.product_name, p.site
+                FROM product p
+                WHERE EXISTS (
+                    SELECT 1 FROM price_changes pc 
+                    WHERE pc.product_id = p.id
+                )
+                ORDER BY p.product_name
+            """)
+            return self.cursor.fetchall()
+        except Exception as e:
+            print(f"Error getting products with price changes: {e}")
+            return []
