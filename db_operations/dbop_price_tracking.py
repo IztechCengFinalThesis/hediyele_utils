@@ -25,7 +25,6 @@ class DatabaseOperationsPriceTracking:
         self.conn.rollback()
 
     def get_products_for_tracking(self) -> List[Tuple]:
-        """Get products that haven't been tracked today"""
         try:
             self.cursor.execute("""
                 SELECT p.id, p.link, p.price, p.site 
@@ -36,6 +35,7 @@ class DatabaseOperationsPriceTracking:
                     AND pc.created_date = CURRENT_DATE
                 )
                 AND p.site = ANY(%s)
+                LIMIT 30
             """, (list(WEB_SITES.keys()),))
             return self.cursor.fetchall()
         except Exception as e:
@@ -43,15 +43,12 @@ class DatabaseOperationsPriceTracking:
             return []
 
     def record_price_change(self, product_id: int, old_price: float, new_price: float) -> bool:
-        """Record a price change in the database"""
         try:
-            # Insert price change record
             self.cursor.execute("""
                 INSERT INTO price_changes (product_id, old_price, new_price)
                 VALUES (%s, %s, %s)
             """, (product_id, old_price, new_price))
             
-            # Update current price in product table
             self.cursor.execute("""
                 UPDATE product 
                 SET price = %s 
@@ -87,7 +84,6 @@ class DatabaseOperationsPriceTracking:
             return []
 
     def get_today_tracked_count(self) -> int:
-        """Get count of products tracked today"""
         try:
             self.cursor.execute("""
                 SELECT COUNT(DISTINCT product_id)

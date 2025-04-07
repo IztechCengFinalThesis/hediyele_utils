@@ -96,7 +96,7 @@ class Prompts:
                     "parameters": Prompts.get_categorization_function_schema(main_categories)
                 }],
                 function_call={"name": "categorize_products"},
-                temperature=0.2
+                temperature=0.0
             )
             
             result = json.loads(response.choices[0].message.function_call.arguments)
@@ -119,7 +119,7 @@ class Prompts:
                     {"role": "system", "content": "You are an assistant that specializes in concise text summarization."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.3
+                temperature=0.2
             )
             summary = response.choices[0].message.content.strip()
             return summary

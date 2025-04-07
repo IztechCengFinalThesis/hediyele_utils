@@ -14,7 +14,8 @@ options = st.sidebar.radio(
         "Edit Main Categories",
         "Upload CSV Products",
         "Run Database Setup",
-        "Price Changes"
+        "Price Changes",
+        "Price Charts"
     ]
 )
 
@@ -53,3 +54,7 @@ elif options == "Edit Main Categories":
 elif options == "Price Changes":
     from st_pages.price_changes import app as price_changes_app
     price_changes_app()
+
+elif options == "Price Charts":
+    from st_pages.price_charts import app as price_charts_app
+    price_charts_app()

@@ -51,7 +51,6 @@ class MainCategoryWriter:
             self.db.close()
 
     def clear_all_categories(self):
-        """ Tüm kategorileri temizler ve main_categories tablosunu sıfırlar. """
         try:
             self.db.connect()
 

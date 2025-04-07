@@ -9,7 +9,6 @@ class PriceTracker:
         self.db = DatabaseOperationsPriceTracking()
 
     def track_prices(self) -> Dict[str, int]:
-        """Track prices for all products and return statistics"""
         try:
             products = self.db.get_products_for_tracking()
             stats = {"total": len(products), "updated": 0, "unchanged": 0, "failed": 0}
@@ -30,6 +29,12 @@ class PriceTracker:
                         continue
 
                     new_price = float(product_details["Price"])
+                    
+                    if new_price <= 0:
+                        print(f"Skipping zero or negative price for product {product_id}")
+                        stats["failed"] += 1
+                        continue
+                        
                     success = self.db.record_price_change(product_id, current_price, new_price)
 
                     if not success:
