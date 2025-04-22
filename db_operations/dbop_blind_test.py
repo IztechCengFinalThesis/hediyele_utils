@@ -147,7 +147,7 @@ class DatabaseOperationsBlindTest:
             "special_house_warming": 1.0,
             "special_mothers_day": 1.0,
             "special_fathers_day": 1.0,
-            "interest_sports": 1.2,
+            "interest_sports": 1.0,
             "interest_music": 1.0,
             "interest_books": 1.0,
             "interest_technology": 1.0,

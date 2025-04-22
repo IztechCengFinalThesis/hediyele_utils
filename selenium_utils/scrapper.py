@@ -7,16 +7,18 @@ import re
 
 class BaseScraper:
     def __init__(self, driver_path='selenium_utils/driver/chromedriver.exe'):
-        self.driver = webdriver.Chrome(service=Service(driver_path))
-        self.driver.maximize_window()
+        options = webdriver.ChromeOptions()
+        options.add_argument('--headless')  
+        options.add_argument('--disable-gpu')  
+        options.add_argument('--window-size=1920,1080') 
+        
+        self.driver = webdriver.Chrome(service=Service(driver_path), options=options)
 
     def get_product_details(self, link):
         raise NotImplementedError
 
     def quit(self):
         self.driver.quit()
-
-import re
 
 class HepsiBuradaScraper(BaseScraper):
     def get_product_details(self, link):
