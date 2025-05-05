@@ -7,5 +7,7 @@ CREATE TABLE IF NOT EXISTS product (
     price NUMERIC,
     description TEXT,
     rating TEXT,
-    site TEXT NOT NULL CHECK (site IN ('HepsiBurada', 'Amazon'))
+    site TEXT NOT NULL CHECK (site IN ('HepsiBurada', 'Amazon')),
+    is_last_7_days_lower_price BOOLEAN DEFAULT FALSE,
+    is_last_30_days_lower_price BOOLEAN DEFAULT FALSE
 );

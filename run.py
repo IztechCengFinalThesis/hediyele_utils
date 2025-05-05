@@ -16,7 +16,6 @@ options = st.sidebar.radio(
         "Run Database Setup",
         "Price Changes",
         "Price Charts",
-        "Blind Test",
     ]
 )
 
@@ -59,7 +58,3 @@ elif options == "Price Changes":
 elif options == "Price Charts":
     from st_pages.price_charts import app as price_charts_app
     price_charts_app()
-
-elif options == "Blind Test":
-    from st_pages.blind_test import app as blind_test_app
-    blind_test_app()

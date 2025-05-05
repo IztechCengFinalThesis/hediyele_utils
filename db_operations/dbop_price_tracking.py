@@ -48,17 +48,31 @@ class DatabaseOperationsPriceTracking:
                 INSERT INTO price_changes (product_id, old_price, new_price)
                 VALUES (%s, %s, %s)
             """, (product_id, old_price, new_price))
-            
-            self.cursor.execute("""
-                UPDATE product 
-                SET price = %s 
+
+            update_query = """
+                UPDATE product
+                SET
+                    price = %s,
+                    is_last_7_days_lower_price = (%s <= COALESCE((
+                        SELECT MIN(pc.new_price)
+                        FROM price_changes pc
+                        WHERE pc.product_id = %s
+                          AND pc.created_date >= CURRENT_DATE - INTERVAL '6 days'
+                    ), %s)),
+                    is_last_30_days_lower_price = (%s <= COALESCE((
+                        SELECT MIN(pc.new_price)
+                        FROM price_changes pc
+                        WHERE pc.product_id = %s
+                          AND pc.created_date >= CURRENT_DATE - INTERVAL '29 days'
+                    ), %s))
                 WHERE id = %s
-            """, (new_price, product_id))
-            
+            """
+            params = (new_price, new_price, product_id, new_price, new_price, product_id, new_price, product_id)
+            self.cursor.execute(update_query, params)
             self.commit()
             return True
         except Exception as e:
-            print(f"Error recording price change: {e}")
+            print(f"Error recording price change for product {product_id}: {e}")
             self.rollback()
             return False
 
