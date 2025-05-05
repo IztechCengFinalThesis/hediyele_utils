@@ -170,7 +170,8 @@ class DatabaseOperationsData:
             print(f"Database Error: {e}")
             return 0
 
-    def add_product_to_database(self, product_name, category_id, link, price, description, rating):
+    def add_product_to_database(self, product_name, category_id, link, price, description, rating) -> Optional[int]:
+        product_id = None
         try:
             self.cursor.execute(
                 "SELECT id FROM product WHERE link = %s",
@@ -180,20 +181,37 @@ class DatabaseOperationsData:
             
             if existing_product:
                 print(f"Product with link '{link}' already exists in the database.")
-                return False
+                return None # Return None if product exists
                 
             self.cursor.execute(
                 """
                 INSERT INTO product (category_id, link, product_name, price, description, rating)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s) RETURNING id;
                 """,
                 (category_id, link, product_name, price, description, rating)
             )
+            product_id = self.cursor.fetchone()[0]
             self.conn.commit()
-            return True
+            return product_id 
         except Exception as e:
             print(f"An error occurred while adding the product: {e}")
             self.conn.rollback()
+            return None
+
+    def add_product_image(self, product_id: int, image_data: bytes, image_order: int = 0) -> bool:
+        try:
+            self.cursor.execute(
+                """
+                INSERT INTO product_images (product_id, image_data, image_order)
+                VALUES (%s, %s, %s)
+                """,
+                (product_id, image_data, image_order)
+            )
+            self.commit()
+            return True
+        except Exception as e:
+            print(f"Error inserting product image for product_id {product_id}: {e}")
+            self.rollback()
             return False
 
     def add_category_if_not_exists(self, category_name):

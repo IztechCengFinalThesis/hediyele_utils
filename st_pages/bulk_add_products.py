@@ -65,8 +65,8 @@ def create_feature_grid(df, feature_dict, title):
 def app():
     st.title("Bulk Add Products")
     
-    if "bulk_product_data" not in st.session_state:
-        st.session_state.bulk_product_data = []
+    if "bulk_product_data_with_images" not in st.session_state:
+        st.session_state.bulk_product_data_with_images = []
     if "product_features" not in st.session_state:
         st.session_state.product_features = []
     if "current_step" not in st.session_state:
@@ -83,73 +83,82 @@ def app():
 
                 if scraper_class:
                     scraper = scraper_class()
-                    fetched_products = []
+                    fetched_products_raw = []
                     
-                    for l in links:
-                        product_details = scraper.get_product_details(l)
-                        if product_details:
-                            fetched_products.append(product_details)
+                    with st.spinner(f"Fetching {len(links)} products..."):
+                        for i, l in enumerate(links):
+                            st.write(f"Fetching {i+1}/{len(links)}: {l}")
+                            product_details = scraper.get_product_details(l)
+                            if product_details:
+                                fetched_products_raw.append(product_details)
                     
                     scraper.quit()
                     
-                    if fetched_products:
-                        st.session_state.bulk_product_data = fetched_products
-                        st.success(f"Fetched {len(fetched_products)} products successfully!")
+                    if fetched_products_raw:
+                        st.session_state.bulk_product_data_with_images = fetched_products_raw
+                        display_data = [{k: v for k, v in p.items() if k != 'Image'} for p in fetched_products_raw]
+                        st.session_state.bulk_product_data = display_data
+                        st.success(f"Fetched {len(fetched_products_raw)} products successfully!")
                     else:
                         st.warning("No products were fetched. Please check the links.")
             else:
                 st.error("Please enter at least one product link.")
 
         if st.session_state.bulk_product_data:
-            st.subheader("Review Product Data")
+            st.subheader("Review Product Data (Images not shown in grid)")
             df = pd.DataFrame(st.session_state.bulk_product_data)
             edited_df = st.data_editor(df, num_rows="dynamic")
 
             if st.button("Calculate Features"):
                 feature_writer = ProductFeatureWriter()
-                all_features = []
+                all_features_data = []
                 
-                for _, row in edited_df.iterrows():
+                for idx, row in edited_df.iterrows():
+                    raw_product = next((p for p in st.session_state.bulk_product_data_with_images if p['Link'] == row['Link']), None)
+                    image_bytes = raw_product['Image'] if raw_product else None
+
                     product_info = {
                         "product_name": row["Product Name"],
                         "category_name": row["Category"],
                         "description": row["Description"]
                     }
                     features = feature_writer.calculate_product_features(product_info)
-                    product_features = {
+                    
+                    product_full_data = {
                         "Product Name": row["Product Name"],
                         "Category": row["Category"],
                         "Link": row["Link"],
                         "Price": row["Price"],
                         "Description": row["Description"],
                         "Rating": row["Rating"],
+                        "Image": image_bytes,
                         **features
                     }
-                    all_features.append(product_features)
+                    all_features_data.append(product_full_data)
                 
-                st.session_state.product_features = all_features
+                st.session_state.product_features = all_features_data
                 st.session_state.current_step = "review"
                 st.rerun()
 
     elif st.session_state.current_step == "review":
-        st.subheader("Review Product Features")
+        st.subheader("Review Product Features (Images not shown in grid)")
         
         if st.session_state.product_features:
-            df = pd.DataFrame(st.session_state.product_features)
+            df_display = pd.DataFrame([{k: v for k, v in p.items() if k != 'Image'} for p in st.session_state.product_features])
             
             tabs = st.tabs(["Age Groups", "Gender", "Special Occasions", "Interests"])
             
             with tabs[0]:
-                df = create_feature_grid(df, AGE_GROUPS, "Age Groups")
+                df_display = create_feature_grid(df_display, AGE_GROUPS, "Age Groups")
             
             with tabs[1]:
-                df = create_feature_grid(df, GENDERS, "Gender")
+                df_display = create_feature_grid(df_display, GENDERS, "Gender")
             
             with tabs[2]:
-                df = create_feature_grid(df, SPECIAL_OCCASIONS, "Special Occasions")
+                df_display = create_feature_grid(df_display, SPECIAL_OCCASIONS, "Special Occasions")
             
             with tabs[3]:
-                df = create_feature_grid(df, INTERESTS, "Interests")
+                df_display = create_feature_grid(df_display, INTERESTS, "Interests")
             
             col1, col2 = st.columns(2)
             
@@ -163,38 +172,59 @@ def app():
                 main_category_writer = MainCategoryWriter()
                 
                 success_count = 0
+                error_count = 0
                 
-                for _, row in df.iterrows():
-                    category_id = db_operations.add_category_if_not_exists(row["Category"])
-                    
-                    success = db_operations.add_product_to_database(
-                        row["Product Name"],
-                        category_id,
-                        row["Link"],
-                        row["Price"],
-                        row["Description"],
-                        row["Rating"]
-                    )
-                    
-                    if success:
-                        features = {
-                            key: row[key] 
-                            for features in [AGE_GROUPS, GENDERS, SPECIAL_OCCASIONS, INTERESTS]
-                            for key in features
-                        }
+                with st.spinner(f"Saving {len(st.session_state.product_features)} products..."):
+                    for i, product_data in enumerate(st.session_state.product_features):
+                        st.write(f"Processing {i+1}/{len(st.session_state.product_features)}: {product_data.get('Product Name', 'N/A')}")
+
+                        edited_row = df_display[df_display['Link'] == product_data['Link']].iloc[0]
+
+                        category_id = db_operations.add_category_if_not_exists(edited_row["Category"])
                         
-                        feature_writer.save_product_features(
-                            db_operations.last_inserted_id(),
-                            features
+                        if not category_id:
+                            st.warning(f"Skipping product due to category error: {edited_row['Product Name']}")
+                            error_count += 1
+                            continue
+
+                        new_product_id = db_operations.add_product_to_database(
+                            edited_row["Product Name"],
+                            category_id,
+                            edited_row["Link"],
+                            edited_row["Price"],
+                            edited_row["Description"],
+                            edited_row["Rating"]
                         )
-                        success_count += 1
-                
+                        
+                        if new_product_id:
+                            features = {
+                                key: edited_row.get(display_name, product_data.get(key))
+                                for feature_group in [AGE_GROUPS, GENDERS, SPECIAL_OCCASIONS, INTERESTS]
+                                for key, display_name in feature_group.items()
+                            }
+                            
+                            feature_writer.save_product_features(new_product_id, features)
+
+                            image_bytes = product_data.get("Image")
+                            if image_bytes:
+                                img_success = db_operations.add_product_image(new_product_id, image_bytes)
+                                if not img_success:
+                                    st.warning(f"Saved product {edited_row['Product Name']}, but failed to save image.")
+                            
+                            success_count += 1
+                        else:
+                            st.warning(f"Skipping product (already exists or DB error): {edited_row['Product Name']}")
+                            error_count += 1
+
                 if success_count > 0:
                     main_category_writer.write_main_categories()
                     st.success(f"Successfully added {success_count} products!")
+                    if error_count > 0:
+                        st.warning(f"{error_count} products were skipped (check warnings above).")
                     st.session_state.current_step = "input"
                     st.session_state.bulk_product_data = []
                     st.session_state.product_features = []
+                    st.session_state.bulk_product_data_with_images = []
                     st.rerun()
                 else:
-                    st.error("No products were added successfully.")
+                    st.error(f"No products were added successfully. {error_count} products were skipped.")

@@ -4,6 +4,8 @@ from db_operations.dbop_data import DatabaseOperationsData
 from data_writer.main_category_writer import MainCategoryWriter
 from data_writer.product_features_writer import ProductFeatureWriter
 from constants import AGE_GROUPS, GENDERS, SPECIAL_OCCASIONS, INTERESTS 
+from utils.image_utils import ImageProcessor
+import io
 
 def app():
     st.title("Add Product")
@@ -16,6 +18,8 @@ def app():
         st.session_state.current_step = "input"  
     if "form_data" not in st.session_state:
         st.session_state.form_data = {}
+    if "image_bytes" not in st.session_state:
+        st.session_state.image_bytes = None
     
     if st.session_state.current_step == "input":
         site_option = st.selectbox("Select Site", list(WEB_SITES.keys()))
@@ -25,9 +29,16 @@ def app():
             if link_input:
                 scraper_class = WEB_SITES.get(site_option)
                 if scraper_class:
-                    scraper = scraper_class()
-                    st.session_state.product_data = scraper.get_product_details(link_input)
-                    scraper.quit()
+                    with st.spinner("Fetching product data..."):
+                        scraper = scraper_class()
+                        st.session_state.product_data = scraper.get_product_details(link_input)
+                        scraper.quit()
+                        st.session_state.image_bytes = st.session_state.product_data.get("Image")
+                        if st.session_state.image_bytes:
+                            st.image(st.session_state.image_bytes, caption="Fetched Image (Resized)", width=150)
+                        else:
+                            st.warning("Could not fetch product image.")
+
             else:
                 st.error("Please enter a product link.")
 
@@ -40,6 +51,10 @@ def app():
         description = st.text_area("Description", value=product_data.get("Description", ""), key="description")
         rating = st.text_input("Rating", value=product_data.get("Rating", ""), key="rating")
 
+        # Display fetched image if available
+        if st.session_state.image_bytes:
+            st.image(st.session_state.image_bytes, caption="Fetched Image (Resized)", width=150)
+
         if st.button("Calculate Features"):
             if all([product_name, link, description, category_name, rating, price]):
                 # Store form data in session state
@@ -49,7 +64,8 @@ def app():
                     "link": link,
                     "price": price,
                     "description": description,
-                    "rating": rating
+                    "rating": rating,
+                     # Image bytes are already in session_state.image_bytes
                 }
                 
                 product_info = {
@@ -126,33 +142,47 @@ def app():
         col1, col2 = st.columns(2)
         if col1.button("Back to Edit"):
             st.session_state.current_step = "input"
+            # Keep image bytes if going back
             st.rerun()
 
         if col2.button("Confirm and Save"):
             db_operations = DatabaseOperationsData()
             category_id = db_operations.add_category_if_not_exists(st.session_state.form_data["category_name"])
             
-            success = db_operations.add_product_to_database(
-                st.session_state.form_data["product_name"],
-                category_id,
-                st.session_state.form_data["link"],
-                st.session_state.form_data["price"],
-                st.session_state.form_data["description"],
-                st.session_state.form_data["rating"]
-            )
+            if category_id:
+                new_product_id = db_operations.add_product_to_database(
+                    st.session_state.form_data["product_name"],
+                    category_id,
+                    st.session_state.form_data["link"],
+                    st.session_state.form_data["price"],
+                    st.session_state.form_data["description"],
+                    st.session_state.form_data["rating"]
+                )
 
-            if success:
-                feature_writer = ProductFeatureWriter()
-                feature_writer.save_product_features(db_operations.last_inserted_id(), edited_features)
-                
-                main_category_writer = MainCategoryWriter()
-                main_category_writer.write_main_categories()
+                if new_product_id:
+                    # Save features
+                    feature_writer = ProductFeatureWriter()
+                    feature_writer.save_product_features(new_product_id, edited_features)
 
-                st.success("Product and features have been successfully added!")
-                st.session_state.current_step = "input"
-                st.session_state.product_data = {}
-                st.session_state.product_features = None
-                st.session_state.form_data = {}
-                st.rerun()
+                    # Save image if available
+                    if st.session_state.image_bytes:
+                        img_success = db_operations.add_product_image(new_product_id, st.session_state.image_bytes)
+                        if not img_success:
+                             st.warning("Product added, but failed to save the image.")
+                    
+                    # Update main categories
+                    main_category_writer = MainCategoryWriter()
+                    main_category_writer.write_main_categories()
+
+                    st.success("Product and features have been successfully added!")
+                    # Reset state
+                    st.session_state.current_step = "input"
+                    st.session_state.product_data = {}
+                    st.session_state.product_features = None
+                    st.session_state.form_data = {}
+                    st.session_state.image_bytes = None # Clear image
+                    st.rerun()
+                else:
+                    st.error("An error occurred while adding the product (Product might already exist or DB error).")
             else:
-                st.error("An error occurred while adding the product.")
+                 st.error("Could not find or create category.")
