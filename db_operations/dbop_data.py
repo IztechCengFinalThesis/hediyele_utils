@@ -170,7 +170,7 @@ class DatabaseOperationsData:
             print(f"Database Error: {e}")
             return 0
 
-    def add_product_to_database(self, product_name, category_id, link, price, description, rating) -> Optional[int]:
+    def add_product_to_database(self, product_name, category_id, link, price, description, rating, site) -> Optional[int]:
         product_id = None
         try:
             self.cursor.execute(
@@ -181,14 +181,14 @@ class DatabaseOperationsData:
             
             if existing_product:
                 print(f"Product with link '{link}' already exists in the database.")
-                return None # Return None if product exists
+                return None 
                 
             self.cursor.execute(
                 """
-                INSERT INTO product (category_id, link, product_name, price, description, rating)
-                VALUES (%s, %s, %s, %s, %s, %s) RETURNING id;
+                INSERT INTO product (category_id, link, product_name, price, description, rating, site)
+                VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id;
                 """,
-                (category_id, link, product_name, price, description, rating)
+                (category_id, link, product_name, price, description, rating, site)
             )
             product_id = self.cursor.fetchone()[0]
             self.conn.commit()

@@ -4,6 +4,7 @@ from data_writer.main_category_writer import MainCategoryWriter
 from data_writer.product_features_writer import ProductFeatureWriter
 from utils.image_utils import ImageProcessor
 import io
+from constants import WEB_SITES
 
 def app():
     st.title("Add Product Manually")
@@ -14,6 +15,7 @@ def app():
     price = st.number_input("Price", min_value=0.0, format="%.2f")
     description = st.text_area("Description", placeholder="Enter the product description")
     rating = st.slider("Rating", min_value=0.0, max_value=5.0, step=0.1)
+    site_option = st.selectbox("Select Site", list(WEB_SITES.keys()))
     
     uploaded_file = st.file_uploader("Upload Product Image", type=["png", "jpg", "jpeg", "webp"])
     processed_image_bytes = None
@@ -28,13 +30,13 @@ def app():
             st.error("Could not process the uploaded image.")
 
     if st.button("Add Product"):
-        if all([product_name, link, description, category_name, rating, price]):
+        if all([product_name, link, description, category_name, rating, price, site_option]):
             db_operations = DatabaseOperationsData()
             category_id = db_operations.add_category_if_not_exists(category_name)
 
             if category_id:
                 new_product_id = db_operations.add_product_to_database(
-                    product_name, category_id, link, price, description, rating
+                    product_name, category_id, link, price, description, rating, site_option
                 )
 
                 if new_product_id:

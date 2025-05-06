@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS product_features (
     special_house_warming FLOAT DEFAULT 0.0,
     special_mothers_day FLOAT DEFAULT 0.0,
     special_fathers_day FLOAT DEFAULT 0.0,
+    special_other FLOAT DEFAULT 0.0,
 
     -- interest
     interest_sports FLOAT DEFAULT 0.0, 

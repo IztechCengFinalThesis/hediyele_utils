@@ -30,7 +30,8 @@ SPECIAL_OCCASIONS = {
     "special_new_year": "New Year",
     "special_house_warming": "House Warming",
     "special_mothers_day": "Mother's Day",
-    "special_fathers_day": "Father's Day"
+    "special_fathers_day": "Father's Day",
+    "special_other": "Other"
 }
 
 # Interest category mappings
