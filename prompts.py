@@ -100,11 +100,13 @@ class Prompts:
             )
             
             result = json.loads(response.choices[0].message.function_call.arguments)
-            return {item["category_name"]: item["main_category"] for item in result["categorizations"]}
+            categorizations = {item["category_name"]: item["main_category"] for item in result["categorizations"]}
+            
+            return {category: categorizations.get(category, "Unknown") for category in categories}
                 
         except Exception as e:
             print(f"Error categorizing with OpenAI: {e}")
-            return {}
+            return {category: "Unknown" for category in categories}
     
     @staticmethod
     def summarize_description(client: openai.OpenAI, description: str) -> str:
