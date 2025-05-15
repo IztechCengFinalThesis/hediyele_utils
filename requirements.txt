@@ -4,6 +4,7 @@ SQLAlchemy
 openpyxl
 scikit-learn
 openapi
+openai
 python-dotenv
 tiktoken
 streamlit
