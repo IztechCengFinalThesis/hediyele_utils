@@ -36,6 +36,7 @@ else:
             "Run Database Setup",
             "Price Changes",
             "Price Charts",
+            "Blind Test Analysis",
             "Admin Management",
         ]
     )
@@ -79,6 +80,10 @@ else:
     elif options == "Price Charts":
         from st_pages.price_charts import app as price_charts_app
         price_charts_app()
+        
+    elif options == "Blind Test Analysis":
+        from st_pages.blind_test_analysis import app as blind_test_analysis_app
+        blind_test_analysis_app()
         
     elif options == "Admin Management":
         from st_pages.admin_management import app as admin_management_app
