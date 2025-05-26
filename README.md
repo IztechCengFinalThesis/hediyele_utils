@@ -1,77 +1,130 @@
-# Hedileye Utils
+# Hediyele Utils
 
-Utility for database operations
+A comprehensive product management and price tracking system built with Streamlit.
 
 ## Description
 
-This project is designed to handle and process various categories of data, providing tools to write, vectorize, and execute operations on structured data. It includes scripts for managing database tables, vectorizing categories, and writing processed data into different formats.
+Hediyele Utils is a web-based application designed to manage products, track prices, and perform various data operations. The system includes features for product management, price tracking, category management, and administrative functions, all wrapped in a user-friendly Streamlit interface with authentication.
 
-## Folder Structure
+## Features
 
-Here’s an overview of the repository's folder and file structure:
+- **User Authentication**: Secure login system for authorized access
+- **Product Management**:
+  - Add products manually or automatically
+  - Bulk product upload via CSV
+  - Delete products
+  - View and manage existing products
+- **Category Management**:
+  - Edit main categories
+  - Category vectorization
+- **Price Tracking**:
+  - Monitor price changes
+  - View price charts and trends
+  - Blind test analysis
+- **Admin Features**:
+  - User management
+  - Database setup and configuration
+  - System administration
 
-all_tables/
-│   ├── added_file_names.sql       # SQL file for managing added file names
-│   ├── categories.sql             # SQL script for handling categories
-│   ├── categories_vectorized.sql  # SQL for vectorized category data
-│   └── product.sql                # SQL script for product table
-config/                            # Configuration files for the project
-│   └── db_config.sql              # For getting the database connection 
-data/                              # Placeholder for raw and processed data files
-data_writer/                       # Scripts for writing and processing data
-│   ├── data_writer_utils.py       # Utility functions for data writing
-│   └── main_category_writer.py    # Main script for category data writing
-migrations/                        # Database migration files 
-table_executor/                    # Tools to execute table operations
-│   └── table_executor_utils.py    # Executing the sql files in all tables 
-vectorizer_utils/                  # Utilities for data vectorization
-│   └── vectorizer_utils.py        # Vectorizing the needed things
-.env                               # Environment variables file
-.gitignore                         # Git ignore rules
-README.md                          # Project documentation
-requirements.txt                   # Python dependencies
-run.py                             # Main entry point of the project
+## Technology Stack
 
-## Setup and Installation
+- **Frontend**: Streamlit
+- **Backend**: Python
+- **Database**: PostgreSQL
+- **Data Processing**: Pandas, scikit-learn
+- **Web Scraping**: Selenium
+- **Additional Tools**: OpenAI integration
 
-1. Clone the repository:
-   git clone <repository_url>
+## Project Structure
 
-2. Navigate to the project directory:
-   cd <project_directory>
+```
+├── config/                 # Database and configuration settings
+├── data/                  # Data storage and processing
+├── data_writer/           # Data writing utilities
+├── db_operations/         # Database operation modules
+├── price_tracking/        # Price monitoring functionality
+├── selenium_utils/        # Web scraping utilities
+├── st_pages/             # Streamlit page components
+├── table_executor/       # Database table operations
+├── utils/                # General utility functions
+├── constants.py          # Global constants
+├── create_initial_admin.py # Admin setup script
+├── prompts.py            # System prompts
+├── requirements.txt      # Project dependencies
+└── run.py               # Main application entry point
+```
 
-3. Create and activate a virtual environment (optional but recommended):
+## Installation
+
+1. **Clone the Repository**:
+   ```bash
+   git clone <repository-url>
+   cd hediyele_utils
+   ```
+
+2. **Set Up Python Environment**:
+   ```bash
    python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   # For Windows
+   venv\Scripts\activate
+   # For Unix/MacOS
+   source venv/bin/activate
+   ```
 
-4. Install dependencies:
+3. **Install Dependencies**:
+   ```bash
    pip install -r requirements.txt
+   ```
 
-5. Configure environment variables in the `.env` file.
+4. **Environment Setup**:
+   Create a `.env` file in the root directory with the following variables:
+   ```
+   DB_HOST=your_database_host
+   DB_NAME=your_database_name
+   DB_USER=your_database_user
+   DB_PASSWORD=your_database_password
+   OPENAI_API_KEY=your_openai_api_key (if using OpenAI features)
+   ```
 
 ## Usage
 
-### Running the Project
-To execute the main script, run:
-   python run.py
+1. **Start the Application**:
+   ```bash
+   streamlit run run.py
+   ```
 
-### Key Components
-- **Data Writing**: Use scripts in `data_writer/` to process and write data.
-- **Vectorization**: Utilities in `vectorizer_utils/` are available for handling vectorized representations of categories.
-- **SQL Operations**: Scripts in `all_tables/` manage SQL-based operations on the database.
+2. **First-time Setup**:
+   - Run the database setup from the sidebar menu
+   - Create an initial admin user using `create_initial_admin.py`
+   - Log in with your admin credentials
+
+3. **Available Operations**:
+   - Add/Delete Products
+   - Bulk Upload Products
+   - View and Manage Products
+   - Track Price Changes
+   - Manage Categories
+   - View Analytics and Charts
+
+## Development
+
+- The project uses Streamlit for the web interface
+- Database operations are handled through SQLAlchemy
+- Price tracking utilizes Selenium for web scraping
+- Data processing is done using Pandas and scikit-learn
 
 ## Contributing
 
-1. Fork the repository.
-2. Create a new branch (`git checkout -b feature/your-feature`).
-3. Commit your changes (`git commit -m 'Add some feature'`).
-4. Push to the branch (`git push origin feature/your-feature`).
-5. Open a pull request.
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ## License
 
-This project is licensed under [Your License]. See the `LICENSE` file for details.
+This project is proprietary and confidential. All rights reserved.
 
-## Contact
+## Support
 
-For questions or feedback, please contact [your-email@example.com].
+For support and queries, please contact the development team or raise an issue in the repository.

@@ -35,7 +35,6 @@ class DatabaseOperationsPriceTracking:
                     AND pc.created_date = CURRENT_DATE
                 )
                 AND p.site = ANY(%s)
-                LIMIT 30
             """, (list(WEB_SITES.keys()),))
             return self.cursor.fetchall()
         except Exception as e:

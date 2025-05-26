@@ -152,9 +152,12 @@ import re
 
 def convert_price_str_to_float(price_str: str) -> float:
     numeric_str = re.sub(r"[^\d,\.]", "", price_str)
-    if "," in numeric_str:
-        numeric_str = numeric_str.replace(".", "")
+    
+    if "," in numeric_str and "." in numeric_str:
+        numeric_str = numeric_str.replace(",", "")
+    elif "," in numeric_str and "." not in numeric_str:
         numeric_str = numeric_str.replace(",", ".")
+        
     try:
         return float(numeric_str)
     except ValueError:
