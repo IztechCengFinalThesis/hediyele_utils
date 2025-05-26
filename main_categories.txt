@@ -10,7 +10,8 @@ Supermarket
 Health & Wellness
 Mother & Baby
 Office & Stationery
-Jewelry & Accessories
+Jewelry
+Accessories
 Pet Supplies
 Arts & Party Supplies
 Unknown

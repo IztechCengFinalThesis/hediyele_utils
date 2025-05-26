@@ -195,4 +195,48 @@ class DatabaseOperationsBlindTest:
             return "Unknown user"
         except Exception as e:
             print(f"Error getting session user email: {e}")
-            return "Unknown user" 
+            return "Unknown user"
+
+    def get_all_recommendations(self, email: str = None) -> List[Dict]:
+        """
+        Get all recommendations for scoring algorithms.
+        Optionally filter by user email.
+        """
+        try:
+            query = """
+                SELECT 
+                    btr.algorithm_name,
+                    btr.is_selected,
+                    btr.recommended_order,
+                    btr.bad_recommendation,
+                    btr.recommended_product_id
+                FROM blind_test_recommendations btr
+            """
+            
+            params = []
+            if email:
+                query += """
+                    JOIN blind_test_session bts ON btr.blind_test_session_id = bts.id
+                    WHERE bts.mail = %s
+                """
+                params.append(email)
+                
+            query += """
+                ORDER BY btr.algorithm_name, btr.recommended_order
+            """
+            
+            self.cursor.execute(query, params)
+            
+            return [
+                {
+                    'algorithm_name': row[0],
+                    'is_selected': row[1],
+                    'recommended_order': row[2],
+                    'bad_recommendation': row[3],
+                    'product_id': row[4]
+                }
+                for row in self.cursor.fetchall()
+            ]
+        except Exception as e:
+            print(f"Error getting all recommendations: {e}")
+            return [] 

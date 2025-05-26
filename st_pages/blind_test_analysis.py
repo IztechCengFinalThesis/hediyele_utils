@@ -4,6 +4,68 @@ import altair as alt
 import json
 from db_operations.dbop_blind_test import DatabaseOperationsBlindTest
 
+def calculate_algorithm_score(recommendations):
+    """
+    Calculate a score for an algorithm based on recommendation position
+    and selection status. Bad recommendations are no longer considered.
+    
+    Score is from 0-100 where:
+    - Selected recommendations in earlier positions contribute more points
+    - Algorithms with higher selection rates generally score better
+    
+    Returns 0 if no recommendations exist.
+    """
+    if not recommendations:
+        return 0
+    
+    total_recs = len(recommendations)
+    if total_recs == 0:
+        return 0
+    
+    # Filter out bad recommendations if they exist
+    valid_recs = [r for r in recommendations if not r.get('bad_recommendation', False)]
+    if not valid_recs:
+        return 0
+        
+    total_recs = len(valid_recs)
+    
+    # Find the maximum order/position across all recommendations
+    max_position = max([r['recommended_order'] or 0 for r in valid_recs], default=0) or 1
+    
+    # Base score starts at 0
+    score = 0
+    total_selected = sum(1 for r in valid_recs if r['is_selected'])
+    
+    # If nothing was selected, return a low base score
+    if total_selected == 0:
+        return 20
+    
+    # Calculate weighted position score for selected items
+    # Earlier positions (lower numbers) are worth more
+    position_scores = []
+    for rec in valid_recs:
+        if rec['is_selected']:
+            position = rec['recommended_order'] or max_position
+            
+            # Position weight - first position is worth the most
+            # Exponential decay for later positions (0.8^0=1, 0.8^1=0.8, 0.8^2=0.64, etc.)
+            position_weight = 0.8 ** (position - 1)
+            position_scores.append(position_weight)
+    
+    # Average position score (0-1 range)
+    avg_position_score = sum(position_scores) / len(position_scores) if position_scores else 0
+    
+    # Selection rate as a percentage of total recommendations (0-1 range)
+    selection_rate = total_selected / total_recs
+    
+    # Final score calculation with more weight to position
+    # - 70% based on position scores (earlier = better)
+    # - 30% based on selection rate (higher = better)
+    final_score = (avg_position_score * 70) + (selection_rate * 30)
+    
+    # Ensure score is within 0-100 range
+    return max(0, min(100, final_score))
+
 def app():
     st.title("Blind Test Analysis")
     
@@ -29,11 +91,25 @@ def app():
     algorithm_summary = db_ops.get_algorithm_performance_summary(email=selected_email)
     
     if algorithm_summary:
+        # Get all recommendations to calculate scores
+        all_recs = db_ops.get_all_recommendations(email=selected_email)
+        
+        # Calculate scores for each algorithm
+        algorithm_scores = {}
+        if all_recs:
+            for algorithm_name in set(rec['algorithm_name'] for rec in all_recs):
+                algo_recs = [rec for rec in all_recs if rec['algorithm_name'] == algorithm_name]
+                algorithm_scores[algorithm_name] = calculate_algorithm_score(algo_recs)
+        
         summary_df = pd.DataFrame(algorithm_summary)
+        
+        # Add scores to the summary dataframe
+        summary_df['score'] = summary_df['algorithm_name'].map(
+            lambda x: algorithm_scores.get(x, 0)
+        ).round(1)
         
         # Format the selection rate column
         summary_df['selection_rate'] = summary_df['selection_rate'].round(2).astype(str) + '%'
-        summary_df['bad_recommendation_rate'] = summary_df['bad_recommendation_rate'].round(2).astype(str) + '%'
         
         # Rename columns for display
         summary_df = summary_df.rename(columns={
@@ -42,24 +118,38 @@ def app():
             'total_recommendations': 'Total Recommendations',
             'selected_count': 'Selected Count',
             'selection_rate': 'Selection Rate',
-            'bad_recommendations_count': 'Bad Recommendations',
-            'bad_recommendation_rate': 'Bad Recommendation Rate'
+            'score': 'Algorithm Score (0-100)'
         })
+        
+        # Sort by score in descending order
+        summary_df = summary_df.sort_values('Algorithm Score (0-100)', ascending=False)
         
         st.dataframe(summary_df, use_container_width=True)
         
-        # Create a bar chart for selection rate
+        # Create charts for algorithm performance metrics
         chart_data = pd.DataFrame({
             'Algorithm': [row['algorithm_name'] for row in algorithm_summary],
             'Selection Rate (%)': [row['selection_rate'] for row in algorithm_summary],
-            'Bad Recommendation Rate (%)': [row['bad_recommendation_rate'] for row in algorithm_summary]
+            'Algorithm Score': [algorithm_scores.get(row['algorithm_name'], 0) for row in algorithm_summary]
         })
         
-        # Create two columns for the charts
+        # Create columns for the charts
         col1, col2 = st.columns(2)
         
         with col1:
-            st.subheader("Selection Rate by Algorithm")
+            st.subheader("Algorithm Score")
+            chart_score = alt.Chart(chart_data).mark_bar().encode(
+                x=alt.X('Algorithm:N', sort='-y'),
+                y=alt.Y('Algorithm Score:Q'),
+                color=alt.Color('Algorithm:N', legend=None),
+                tooltip=['Algorithm', 'Algorithm Score']
+            ).properties(
+                height=400
+            )
+            st.altair_chart(chart_score, use_container_width=True)
+        
+        with col2:
+            st.subheader("Selection Rate")
             chart1 = alt.Chart(chart_data).mark_bar().encode(
                 x=alt.X('Algorithm:N', sort='-y'),
                 y=alt.Y('Selection Rate (%):Q'),
@@ -69,18 +159,6 @@ def app():
                 height=400
             )
             st.altair_chart(chart1, use_container_width=True)
-        
-        with col2:
-            st.subheader("Bad Recommendation Rate by Algorithm")
-            chart2 = alt.Chart(chart_data).mark_bar().encode(
-                x=alt.X('Algorithm:N', sort='-y'),
-                y=alt.Y('Bad Recommendation Rate (%):Q'),
-                color=alt.Color('Algorithm:N', legend=None),
-                tooltip=['Algorithm', 'Bad Recommendation Rate (%)']
-            ).properties(
-                height=400
-            )
-            st.altair_chart(chart2, use_container_width=True)
     else:
         st.info("No algorithm performance data found.")
     
@@ -134,53 +212,40 @@ def app():
             st.subheader("Algorithm Performance in This Session")
             if session_details['algorithm_stats']:
                 algo_stats_df = pd.DataFrame(session_details['algorithm_stats'])
+                
+                # Calculate scores for each algorithm in this session
+                algo_scores = {}
+                for algorithm_name in set(rec['algorithm_name'] for rec in session_details['recommendations']):
+                    algo_recs = [rec for rec in session_details['recommendations'] if rec['algorithm_name'] == algorithm_name]
+                    algo_scores[algorithm_name] = calculate_algorithm_score(algo_recs)
+                
+                # Add scores to the dataframe
+                algo_stats_df['score'] = algo_stats_df['algorithm_name'].map(
+                    lambda x: algo_scores.get(x, 0)
+                ).round(1)
+                
                 algo_stats_df['selection_rate'] = algo_stats_df['selection_rate'].round(2).astype(str) + '%'
-                algo_stats_df['bad_recommendation_rate'] = algo_stats_df['bad_recommendation_rate'].round(2).astype(str) + '%'
                 
                 algo_stats_df = algo_stats_df.rename(columns={
                     'algorithm_name': 'Algorithm',
                     'total_recommendations': 'Total Recommendations',
                     'selected_count': 'Selected Count',
                     'selection_rate': 'Selection Rate',
-                    'bad_recommendations_count': 'Bad Recommendations',
-                    'bad_recommendation_rate': 'Bad Recommendation Rate'
+                    'score': 'Algorithm Score (0-100)'
                 })
+                
+                # Sort by score in descending order
+                algo_stats_df = algo_stats_df.sort_values('Algorithm Score (0-100)', ascending=False)
                 
                 st.dataframe(algo_stats_df, use_container_width=True)
                 
-                # Create a comparison chart
+                # Create charts
                 chart_data = pd.DataFrame({
                     'Algorithm': [row['algorithm_name'] for row in session_details['algorithm_stats']],
                     'Selection Rate (%)': [row['selection_rate'] for row in session_details['algorithm_stats']],
-                    'Bad Recommendation Rate (%)': [row['bad_recommendation_rate'] for row in session_details['algorithm_stats']]
+                    'Algorithm Score': [algo_scores.get(row['algorithm_name'], 0) for row in session_details['algorithm_stats']]
                 })
                 
-                # Create two columns for the charts
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    st.subheader("Selection Rate")
-                    chart1 = alt.Chart(chart_data).mark_bar().encode(
-                        x=alt.X('Algorithm:N', sort='-y'),
-                        y=alt.Y('Selection Rate (%):Q'),
-                        color=alt.Color('Algorithm:N', legend=None),
-                        tooltip=['Algorithm', 'Selection Rate (%)']
-                    ).properties(
-                        height=300
-                    )
-                    st.altair_chart(chart1, use_container_width=True)
-                
-                with col2:
-                    st.subheader("Bad Recommendation Rate")
-                    chart2 = alt.Chart(chart_data).mark_bar().encode(
-                        x=alt.X('Algorithm:N', sort='-y'),
-                        y=alt.Y('Bad Recommendation Rate (%):Q'),
-                        color=alt.Color('Algorithm:N', legend=None),
-                        tooltip=['Algorithm', 'Bad Recommendation Rate (%)']
-                    ).properties(
-                        height=300
-                    )
-                    st.altair_chart(chart2, use_container_width=True)
             else:
                 st.info("No algorithm statistics found for this session.")
             

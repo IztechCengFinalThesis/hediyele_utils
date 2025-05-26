@@ -13,7 +13,16 @@ class PriceTracker:
             products = self.db.get_products_for_tracking()
             stats = {"total": len(products), "updated": 0, "unchanged": 0, "failed": 0}
 
-            for product_id, link, current_price, site in products:
+            # Show initial information and prepare placeholders for dynamic updates in Streamlit UI
+            st.write(f"Total products to check: {stats['total']}")
+            progress_bar = st.progress(0)
+            status_placeholder = st.empty()
+
+            for idx, (product_id, link, current_price, site) in enumerate(products, start=1):
+                # Update status for the currently processed product
+                status_placeholder.text(f"Processing product {idx}/{stats['total']} (ID: {product_id})")
+                progress_bar.progress(int(idx / stats['total'] * 100))
+
                 try:
                     scraper_class = WEB_SITES.get(site)
                     if not scraper_class:
@@ -47,8 +56,15 @@ class PriceTracker:
                         stats["unchanged"] += 1
 
                 except Exception as e:
-                    print(f"Error tracking price for product {product_id}: {e}")
+                    # Show error in Streamlit and also keep printing to console for debugging purposes
+                    error_msg = f"Error tracking price for product {product_id}: {e}"
+                    st.error(error_msg)
+                    print(error_msg)
                     stats["failed"] += 1
+
+            # Final update after processing all products
+            status_placeholder.text("Price tracking completed.")
+            progress_bar.progress(100)
 
             return stats
             
