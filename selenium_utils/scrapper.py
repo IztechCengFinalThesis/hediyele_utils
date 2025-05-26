@@ -9,12 +9,40 @@ import io
 from utils.image_utils import ImageProcessor
 
 class BaseScraper:
-    def __init__(self, driver_path='selenium_utils/driver/chromedriver.exe'):
-        options = webdriver.ChromeOptions()  
-        options.add_argument('--disable-gpu')  
-        options.add_argument('--window-size=1920,1080') 
-        
+    def __init__(self, driver_path: str = 'selenium_utils/driver/chromedriver.exe', headless: bool = True):
+        """Create a Chrome driver that works reliably in head-less mode.
+
+        When *headless* is True we enable the modern head-less mode and
+        apply a few common *stealth* flags so that web sites do not hide
+        dynamic content (price, image, etc.) from automation scripts.
+        """
+        options = webdriver.ChromeOptions()
+
+        # Modern head-less mode (only when requested)
+        if headless:
+            options.add_argument('--headless=new')
+
+        # General browser tweaks
+        options.add_argument('--disable-gpu')
+        options.add_argument('--window-size=1920,1080')
+
+        # Stealth flags
+        options.add_argument('--disable-blink-features=AutomationControlled')
+        options.add_argument(
+            '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+            'AppleWebKit/537.36 (KHTML, like Gecko) '
+            'Chrome/125.0.0.0 Safari/537.36'
+        )
+
         self.driver = webdriver.Chrome(service=Service(driver_path), options=options)
+
+        # Remove the easy "webdriver" fingerprint
+        self.driver.execute_cdp_cmd(
+            'Page.addScriptToEvaluateOnNewDocument',
+            {
+                'source': 'Object.defineProperty(navigator, "webdriver", {get: () => undefined});'
+            },
+        )
 
     def get_product_details(self, link):
         raise NotImplementedError
@@ -23,9 +51,29 @@ class BaseScraper:
         self.driver.quit()
 
 class HepsiBuradaScraper(BaseScraper):
+    def _download_image(self, url: str) -> io.BytesIO:
+        """Fetch *url* with the same cookies / headers Selenium is using."""
+        session = requests.Session()
+        for cookie in self.driver.get_cookies():
+            session.cookies.set(cookie["name"], cookie["value"])
+
+        headers = {
+            "User-Agent": self.driver.execute_script("return navigator.userAgent;"),
+            "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+            "Referer": self.driver.current_url,
+        }
+        response = session.get(url, headers=headers, stream=True, timeout=15)
+        response.raise_for_status()
+        return io.BytesIO(response.content)
+
     def get_product_details(self, link):
         self.driver.get(link)
+        WebDriverWait(self.driver, 5).until(
+            lambda d: d.execute_script("return document.readyState") == "complete"
+        )
+
         html = self.driver.page_source
+
         wait = WebDriverWait(self.driver, 10)
         details = {'Link': link, 'Image': None}
 
@@ -35,15 +83,18 @@ class HepsiBuradaScraper(BaseScraper):
         else:
             details['Product Name'] = "Unknown"
 
-        price_match = re.search(r'"product_unit_prices":\s*\[\s*"([^"]+)"\s*\]', html)
-        if price_match:
-            price_str = price_match.group(1).strip()
-            try:
-                details['Price'] = float(price_str.replace(',', ''))
-            except Exception as e:
-                details['Price'] = price_str
-        else:
-            details['Price'] = "0"
+        try:
+            price_elem = wait.until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, 'meta[itemprop="price"]'))
+            )
+            price_raw = price_elem.get_attribute('content') or price_elem.text
+            details['Price'] = convert_price_str_to_float(price_raw)
+        except Exception:
+            price_match = re.search(r'"product_unit_prices":\s*\[\s*"([^"]+)"\s*\]', self.driver.page_source)
+            if price_match:
+                details['Price'] = convert_price_str_to_float(price_match.group(1))
+            else:
+                details['Price'] = 0.0
 
         try:
             desc_elem = wait.until(
@@ -71,23 +122,24 @@ class HepsiBuradaScraper(BaseScraper):
             details['Category'] = "Unknown"
 
         try:
-            image_match = re.search(r'"image":\s*\[\s*"([^"]+)"', html)
-            if image_match:
-                image_url = image_match.group(1)
-                
-                response = requests.get(image_url, stream=True)
-                response.raise_for_status()
-                
-                img_bytes = io.BytesIO(response.content)
-                processed_image_bytes = ImageProcessor.prepare_image_for_db(img_bytes)
-                if processed_image_bytes:
-                    details['Image'] = processed_image_bytes
+            image_url = None
+            cdn_matches = re.findall(
+                r'https://productimages\.hepsiburada\.net[^"\' >]+\.(?:jpg|jpeg|png)(?:/format:webp)?',
+                html,
+                re.IGNORECASE,
+            )
+            print(f"CDN matches: {cdn_matches}")
+            if cdn_matches:
+                image_url = cdn_matches[0]
+            if image_url:
+                print(f"Image URL found: {image_url}")
+                img_bytes = self._download_image(image_url)
+                processed = ImageProcessor.prepare_image_for_db(img_bytes)
+                if processed:
+                    details['Image'] = processed
 
         except requests.exceptions.RequestException as req_e:
             print(f"Error downloading image: {req_e}")
-        except Exception as e:
-            print(f"Error processing image for {link}: {e}")
-            details['Image'] = None
 
         return details
 
