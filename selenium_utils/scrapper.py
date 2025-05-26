@@ -73,54 +73,54 @@ class HepsiBuradaScraper(BaseScraper):
         )
 
         html = self.driver.page_source
-
-        wait = WebDriverWait(self.driver, 10)
         details = {'Link': link, 'Image': None}
+        wait = WebDriverWait(self.driver, 2)
 
-        name_match = re.search(r'<title>\s*(.*?)\s*</title>', html, re.DOTALL)
-        if name_match:
-            details['Product Name'] = name_match.group(1).strip()
-        else:
-            details['Product Name'] = "Unknown"
+        # Find the script tag containing product data
+        script_match = re.search(r'const utagData = ({.*?});', html, re.DOTALL)
+        if script_match:
+            script_content = script_match.group(1)
+            
+            # Extract product name
+            name_match = re.search(r'"product_name_array":"([^"]+)"', script_content)
+            if name_match:
+                details['Product Name'] = name_match.group(1)
+            else:
+                details['Product Name'] = "Unknown"
 
-        try:
-            price_elem = wait.until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, 'meta[itemprop="price"]'))
-            )
-            price_raw = price_elem.get_attribute('content') or price_elem.text
-            details['Price'] = convert_price_str_to_float(price_raw)
-        except Exception:
-            price_match = re.search(r'"product_unit_prices":\s*\[\s*"([^"]+)"\s*\]', self.driver.page_source)
+            # Extract price
+            price_match = re.search(r'"product_prices":\["([^"]+)"\]', script_content)
             if price_match:
                 details['Price'] = convert_price_str_to_float(price_match.group(1))
             else:
                 details['Price'] = 0.0
 
-        try:
-            desc_elem = wait.until(
-                EC.visibility_of_element_located((By.CSS_SELECTOR, 'div[data-test-id="ProductDescription"]'))
-            )
-            details['Description'] = desc_elem.text.strip()
-        except Exception as e:
-            details['Description'] = "Unknown"
+            # Extract category (last value in hierarchy)
+            category_match = re.search(r'"category_name_hierarchy":"([^"]+)"', script_content)
+            if category_match:
+                category_hierarchy = category_match.group(1)
+                category = category_hierarchy.split(' > ')[-1]
+                details['Category'] = category
+            else:
+                details['Category'] = "Unknown"
 
-        try:
-            rating_match = re.search(
-                r'data-test-id=["\']has-review["\'][^>]*>.*?<span[^>]*>(.*?)</span>',
-                html, re.DOTALL
-            )
+            # Extract rating
+            rating_match = re.search(r'"review_rate":"([^"]+)"', script_content)
             if rating_match:
-                details['Rating'] = rating_match.group(1).strip()
-        except Exception as e:
-            details['Rating'] = "Not yet evaluated"
+                details['Rating'] = rating_match.group(1)
+            else:
+                details['Rating'] = "Not yet evaluated"
 
-        cat_match = re.search(r'content_category:\[?"([^"\]]+)"?\]', html)
-        if cat_match:
-            cat_text = cat_match.group(1).replace(r'\x3e', '>').split('>')[-1].strip()
-            details['Category'] = cat_text
-        else:
-            details['Category'] = "Unknown"
+            # Extract description
+            try:
+                desc_elem = wait.until(
+                    EC.visibility_of_element_located((By.CSS_SELECTOR, 'div[data-test-id="ProductDescription"]'))
+                )
+                details['Description'] = desc_elem.text.strip()
+            except Exception as e:
+                details['Description'] = "Unknown"
 
+        # Keep existing image extraction logic
         try:
             image_url = None
             cdn_matches = re.findall(
